@@ -10,6 +10,7 @@ import { Camera } from "@babylonjs/core/Cameras/camera";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Layer } from "@babylonjs/core/Layers/layer";
@@ -19,8 +20,17 @@ import "@babylonjs/core/Shaders/layer.vertex";
 import "@babylonjs/core/Shaders/layer.fragment";
 import "@babylonjs/core/Shaders/default.vertex";
 import "@babylonjs/core/Shaders/standard.fragment";
+import { DIFFICULTY_PROFILES, getAdaptiveThreat, type DifficultyId } from "./difficulty";
+import { GameplayTelemetry, type RunAnalytics } from "./telemetry";
 
 const ROOM_BACKGROUND = "/manus-storage/naika-room-background_d0c50701.png";
+const ENEMY_SPRITES: Record<MosquitoType, string> = {
+  small: "/manus-storage/naika-mosquito-small-sprite_af4952dd.png",
+  fast: "/manus-storage/naika-mosquito-fast-sprite_f65f8e38.png",
+  sturdy: "/manus-storage/naika-mosquito-sturdy-sprite_87f8df86.png",
+};
+const ITEM_ATLAS = "/manus-storage/naika-defense-items-atlas_4c991078.png";
+const VFX_ATLAS = "/manus-storage/naika-woodblock-vfx-atlas_9cc67c3a.png";
 
 export type ItemId = "incense" | "cat" | "frog" | "daruma";
 type MosquitoType = "small" | "fast" | "sturdy";
@@ -37,7 +47,7 @@ export type HudState = {
   notice: string;
 };
 
-export type ResultState = { score: number; best: number; kills: number; duration: number };
+export type ResultState = { score: number; best: number; kills: number; duration: number; analytics?: RunAnalytics };
 
 export type GameCallbacks = {
   onHud: (hud: HudState) => void;
@@ -49,6 +59,7 @@ export type GameHandle = {
   scene: Scene;
   startRun: () => void;
   purchase: (item: ItemId) => void;
+  setDifficulty: (difficulty: DifficultyId) => void;
   retry: () => void;
   dispose: () => void;
 };
@@ -85,6 +96,11 @@ type PlacedItem = {
   nextActionAt: number;
 };
 
+type VfxKind = "tap" | "seal" | "smoke" | "damage";
+type Vfx = { kind: VfxKind; bornAt: number; duration: number; mesh: TransformNode };
+const ITEM_CELL: Record<ItemId, number> = { incense: 0, cat: 1, frog: 2, daruma: 3 };
+const VFX_CELL: Record<VfxKind, number> = { tap: 0, seal: 1, smoke: 2, damage: 3 };
+
 const ITEM_INFO: Record<ItemId, { price: number; label: string; color: Color3 }> = {
   incense: { price: 6, label: "蚊取り線香", color: Color3.FromHexString("#98AD5C") },
   cat: { price: 8, label: "招き猫", color: Color3.FromHexString("#F3E6D3") },
@@ -118,6 +134,17 @@ class GameWorld {
   private mosquitoes: Mosquito[] = [];
   private coinsOnFloor: Coin[] = [];
   private placed: PlacedItem[] = [];
+  private vfxs: Vfx[] = [];
+  private difficulty: DifficultyId = "seasonal";
+  private currentThreat = 1;
+  private taps = 0;
+  private hits = 0;
+  private damageTaken = 0;
+  private coinsCollected = 0;
+  private itemsPlaced = 0;
+  private threatSum = 0;
+  private threatSamples = 0;
+  private readonly telemetry = new GameplayTelemetry();
   private readonly playerRoot: TransformNode;
   private readonly playerHead: AbstractMesh;
   private readonly playerBody: AbstractMesh;
@@ -144,8 +171,15 @@ class GameWorld {
   startRun = () => {
     this.resetRun();
     this.running = true;
+    this.telemetry.start(this.difficulty);
     this.callbacks.onPhase("playing");
-    this.emitHud("蚊を落として、寝息を守ろう");
+    this.emitHud(`${DIFFICULTY_PROFILES[this.difficulty].label}。蚊を落として、寝息を守ろう`);
+  };
+
+  setDifficulty = (difficulty: DifficultyId) => {
+    if (this.running) return;
+    this.difficulty = difficulty;
+    this.emitHud(`${DIFFICULTY_PROFILES[difficulty].label}を選択`);
   };
 
   retry = () => this.startRun();
@@ -155,10 +189,14 @@ class GameWorld {
     this.animatePlayer();
     if (!this.running) return;
     this.now += safeDelta;
+    this.currentThreat = getAdaptiveThreat(this.health, this.hits / Math.max(1, this.taps), this.now);
+    this.threatSum += this.currentThreat;
+    this.threatSamples += 1;
     this.updateItems();
     if (this.now >= this.nextSpawnAt) this.spawnMosquito();
     this.updateMosquitoes(safeDelta);
     this.updateCoins(safeDelta);
+    this.updateVfx();
     if (this.demo && this.now >= this.nextAutoAt) this.runDemo();
     this.emitHud();
   }
@@ -166,6 +204,7 @@ class GameWorld {
   handleTap = (x: number, y: number) => {
     this.unlockAudio();
     if (!this.running) return;
+    this.taps += 1;
     if (this.placement) {
       this.placeItem(this.placement, x, y);
       return;
@@ -208,6 +247,7 @@ class GameWorld {
     this.mosquitoes.forEach((entry) => entry.mesh.dispose());
     this.coinsOnFloor.forEach((entry) => entry.mesh.dispose());
     this.placed.forEach((entry) => entry.mesh.dispose());
+    this.vfxs.forEach((entry) => entry.mesh.dispose());
     this.playerRoot.dispose(false, true);
   };
 
@@ -215,27 +255,38 @@ class GameWorld {
     this.mosquitoes.forEach((entry) => entry.mesh.dispose());
     this.coinsOnFloor.forEach((entry) => entry.mesh.dispose());
     this.placed.forEach((entry) => entry.mesh.dispose());
+    this.vfxs.forEach((entry) => entry.mesh.dispose());
     this.mosquitoes = [];
     this.coinsOnFloor = [];
     this.placed = [];
+    this.vfxs = [];
     this.now = 0;
     this.health = 100;
     this.score = 0;
     this.coins = 4;
     this.combo = 0;
     this.kills = 0;
-    this.nextSpawnAt = 0.9;
+    this.nextSpawnAt = this.demo ? 0.08 : 0.9;
     this.nextAutoAt = 0.45;
     this.placement = null;
+    this.taps = 0;
+    this.hits = 0;
+    this.damageTaken = 0;
+    this.coinsCollected = 0;
+    this.itemsPlaced = 0;
+    this.threatSum = 0;
+    this.threatSamples = 0;
     this.playerRoot.scaling.setAll(1);
   }
 
   private spawnMosquito() {
     const stage = this.now < 30 ? 0 : this.now < 60 ? 1 : 2;
+    const profile = DIFFICULTY_PROFILES[this.difficulty];
     const roll = this.random();
-    const type: MosquitoType = stage === 0 ? (roll < 0.78 ? "small" : "fast") : stage === 1 ? (roll < 0.48 ? "small" : roll < 0.83 ? "fast" : "sturdy") : roll < 0.32 ? "small" : roll < 0.69 ? "fast" : "sturdy";
-    const activeCap = this.now < 30 ? 4 : this.now < 60 ? 6 : 8;
-    const interval = this.now < 30 ? 1.65 : this.now < 60 ? 1.15 : 0.78;
+    const sturdyBias = profile.sturdyBias + Math.max(0, this.currentThreat - 1) * 0.12;
+    const type: MosquitoType = stage === 0 ? (roll < 0.78 - sturdyBias * 0.4 ? "small" : "fast") : stage === 1 ? (roll < 0.48 - sturdyBias ? "small" : roll < 0.83 - sturdyBias * 0.45 ? "fast" : "sturdy") : roll < 0.32 - sturdyBias ? "small" : roll < 0.69 - sturdyBias * 0.45 ? "fast" : "sturdy";
+    const activeCap = Math.max(2, Math.round(profile.activeCaps[stage] * (this.currentThreat > 1.1 ? 1.08 : 1)));
+    const interval = profile.spawnIntervals[stage] / this.currentThreat;
     this.nextSpawnAt = this.now + interval;
     if (this.mosquitoes.filter((entry) => entry.state !== "falling").length >= activeCap) return;
     const info = MOSQUITO_INFO[type];
@@ -243,21 +294,10 @@ class GameWorld {
     const y = 5.8 + this.random() * 0.45;
     const root = new TransformNode(`mosquito-${this.mosquitoId}`, this.scene);
     root.position = new Vector3(x, y, 0.45);
-    const body = this.makeDisc(`mosquito-body-${this.mosquitoId}`, type === "sturdy" ? 0.2 : 0.16, info.color);
-    body.parent = root;
-    const wingMaterial = this.material(`wing-${this.mosquitoId}`, Color3.FromHexString("#F2EBDD"), 0.78);
-    const wingL = MeshBuilder.CreateDisc(`wing-l-${this.mosquitoId}`, { radius: 0.14, tessellation: 16 }, this.scene);
-    wingL.material = wingMaterial;
-    wingL.scaling.y = 0.42;
-    wingL.position = new Vector3(-0.15, 0.1, -0.02);
-    wingL.parent = root;
-    const wingR = wingL.clone(`wing-r-${this.mosquitoId}`)!;
-    wingR.position.x = 0.15;
-    wingR.parent = root;
-    const legs = this.makeDisc(`mosquito-legs-${this.mosquitoId}`, 0.26, Color3.FromHexString("#1D1B22"), 0.22);
-    legs.scaling.y = 0.25;
-    legs.parent = root;
+    const sprite = this.makeSprite(`mosquito-sprite-${this.mosquitoId}`, ENEMY_SPRITES[type], type === "sturdy" ? 0.96 : type === "fast" ? 0.74 : 0.68);
+    sprite.parent = root;
     this.mosquitoes.push({ id: this.mosquitoId++, type, hp: info.hp, state: "approaching", x, y, vx: 0, vy: 0, speed: info.speed, biteAt: 0, fallingFor: 0, mesh: root });
+    this.telemetry.track("enemy_spawned", { type, stage, threat: Number(this.currentThreat.toFixed(2)), difficulty: this.difficulty });
   }
 
   private updateMosquitoes(delta: number) {
@@ -376,6 +416,9 @@ class GameWorld {
 
   private hitMosquito(mosquito: Mosquito) {
     mosquito.hp -= 1;
+    this.hits += 1;
+    this.spawnVfx("tap", mosquito.x, mosquito.y, 0.84);
+    this.telemetry.track("tap_hit", { type: mosquito.type, hpRemaining: mosquito.hp });
     mosquito.mesh.scaling.setAll(1.34);
     window.setTimeout(() => mosquito.mesh.scaling.setAll(1), 90);
     this.playTone(660, 0.055, "square", 0.045);
@@ -388,17 +431,24 @@ class GameWorld {
     if (mosquito.state === "falling") return;
     mosquito.state = "falling";
     mosquito.fallingFor = 0;
+    this.spawnVfx("seal", mosquito.x, mosquito.y, mosquito.type === "sturdy" ? 1.35 : 1.05);
+    this.spawnVfx("smoke", mosquito.x, mosquito.y - 0.1, 0.86);
     this.kills += 1;
     this.combo = this.now - this.lastKillAt <= 3 ? Math.min(20, this.combo + 1) : 1;
     this.lastKillAt = this.now;
     const info = MOSQUITO_INFO[mosquito.type];
-    this.score += Math.round(info.score * (1 + this.combo * 0.05));
+    this.score += Math.round(info.score * DIFFICULTY_PROFILES[this.difficulty].rewardMultiplier * (1 + this.combo * 0.05));
+    this.telemetry.track("enemy_defeated", { type: mosquito.type, source: handTap ? "tap" : "item", combo: this.combo, score: this.score });
     this.emitHud(handTap ? `命中！ ${this.combo}連続` : `道具が蚊を退けた`);
   }
 
   private bitePlayer(damage: number) {
-    this.health = Math.max(0, this.health - damage);
+    const adjustedDamage = Math.round(damage * DIFFICULTY_PROFILES[this.difficulty].damageMultiplier);
+    this.health = Math.max(0, this.health - adjustedDamage);
+    this.damageTaken += adjustedDamage;
     this.combo = 0;
+    this.spawnVfx("damage", 0, this.playerY + 0.3, 1.82);
+    this.telemetry.track("damage_taken", { damage: adjustedDamage, health: this.health, difficulty: this.difficulty });
     this.playerRoot.scaling.x = Math.max(0.65, this.health / 100);
     this.playerRoot.scaling.y = 0.86 + this.health / 800;
     this.playTone(185, 0.12, "sawtooth", 0.06);
@@ -420,9 +470,11 @@ class GameWorld {
   private collectCoin(coin: Coin, notice: string) {
     if (!this.coinsOnFloor.includes(coin)) return;
     this.coins += 1;
+    this.coinsCollected += 1;
     coin.mesh.dispose();
     this.coinsOnFloor = this.coinsOnFloor.filter((entry) => entry !== coin);
     this.playTone(820, 0.055, "triangle", 0.045);
+    this.telemetry.track("coin_collected", { coins: this.coins, source: notice.includes("ダルマ") ? "daruma" : "tap" });
     this.emitHud(notice);
   }
 
@@ -432,8 +484,11 @@ class GameWorld {
     const root = new TransformNode(`item-${id}-${this.placed.length}`, this.scene);
     root.position = new Vector3(safeX, safeY, 0.35);
     const color = ITEM_INFO[id].color;
-    const base = this.makeDisc(`item-${id}-base`, id === "frog" ? 0.48 : 0.4, color);
+    const base = this.makeAtlasSprite(`item-${id}-sprite`, ITEM_CELL[id], id === "frog" ? 0.92 : 0.78);
     base.parent = root;
+    const glow = this.makeDisc(`item-${id}-glow`, id === "frog" ? 0.46 : 0.37, color, 0.16);
+    glow.parent = root;
+    glow.position.z = -0.02;
     if (id === "incense") {
       const ember = this.makeDisc("incense-ember", 0.1, Color3.FromHexString("#F6A33A"));
       ember.parent = root;
@@ -462,7 +517,9 @@ class GameWorld {
     }
     this.placed.push({ id, x: safeX, y: safeY, bornAt: this.now, mesh: root, nextActionAt: this.now + 0.5 });
     this.placement = null;
+    this.itemsPlaced += 1;
     this.playTone(460, 0.09, "triangle", 0.06);
+    this.telemetry.track("item_placed", { item: id, x: Number(safeX.toFixed(1)), y: Number(safeY.toFixed(1)) });
     this.emitHud(`${ITEM_INFO[id].label}を置いた`);
   }
 
@@ -477,8 +534,21 @@ class GameWorld {
     this.placement = null;
     const previous = Number(localStorage.getItem("naika-high-score") ?? "0");
     const best = Math.max(previous, this.score);
+    const analytics: RunAnalytics = {
+      runId: "local",
+      difficulty: this.difficulty,
+      score: this.score,
+      duration: Math.round(this.now),
+      kills: this.kills,
+      hitRate: Number((this.hits / Math.max(1, this.taps)).toFixed(2)),
+      damageTaken: this.damageTaken,
+      coinsCollected: this.coinsCollected,
+      itemsPlaced: this.itemsPlaced,
+      averageThreat: Number((this.threatSum / Math.max(1, this.threatSamples)).toFixed(2)),
+    };
+    this.telemetry.finish(analytics);
     localStorage.setItem("naika-high-score", String(best));
-    this.callbacks.onResult({ score: this.score, best, kills: this.kills, duration: Math.round(this.now) });
+    this.callbacks.onResult({ score: this.score, best, kills: this.kills, duration: Math.round(this.now), analytics });
     this.callbacks.onPhase("result");
   }
 
@@ -504,6 +574,54 @@ class GameWorld {
   private animatePlayer() {
     const breath = 1 + Math.sin(performance.now() / 450) * 0.018 * Math.max(0.3, this.health / 100);
     this.playerBody.scaling.x = 1.22 * breath;
+  }
+
+  private updateVfx() {
+    for (const effect of [...this.vfxs]) {
+      const progress = (this.now - effect.bornAt) / effect.duration;
+      if (progress >= 1) {
+        effect.mesh.dispose();
+        this.vfxs = this.vfxs.filter((entry) => entry !== effect);
+        continue;
+      }
+      effect.mesh.scaling.setAll(1 + progress * (effect.kind === "damage" ? 0.26 : 0.72));
+      effect.mesh.rotation.z += (effect.kind === "tap" ? 0.11 : 0.045);
+      const art = effect.mesh.getChildMeshes()[0];
+      if (art?.material instanceof StandardMaterial) art.material.alpha = Math.max(0, 0.88 - progress * 0.92);
+    }
+  }
+
+  private spawnVfx(kind: VfxKind, x: number, y: number, size: number) {
+    const root = new TransformNode(`vfx-${kind}-${this.vfxs.length}`, this.scene);
+    root.position = new Vector3(x, y, 0.78);
+    const art = this.makeAtlasSprite(`vfx-${kind}-art`, VFX_CELL[kind], size);
+    art.parent = root;
+    this.vfxs.push({ kind, bornAt: this.now, duration: kind === "damage" ? 0.38 : 0.26, mesh: root });
+  }
+
+  private makeSprite(name: string, url: string, size: number) {
+    const plane = MeshBuilder.CreatePlane(name, { width: size, height: size }, this.scene);
+    const material = new StandardMaterial(`${name}-material`, this.scene);
+    const texture = new Texture(url, this.scene, true, false);
+    texture.hasAlpha = true;
+    material.diffuseTexture = texture;
+    material.emissiveTexture = texture;
+    material.useAlphaFromDiffuseTexture = true;
+    material.alpha = 1;
+    material.backFaceCulling = false;
+    plane.material = material;
+    return plane;
+  }
+
+  private makeAtlasSprite(name: string, cell: number, size: number) {
+    const plane = this.makeSprite(name, cell <= 3 ? (name.startsWith("vfx-") ? VFX_ATLAS : ITEM_ATLAS) : ITEM_ATLAS, size);
+    const material = plane.material as StandardMaterial;
+    const texture = material.diffuseTexture as Texture;
+    texture.uScale = 0.5;
+    texture.vScale = 0.5;
+    texture.uOffset = cell % 2 === 0 ? 0 : 0.5;
+    texture.vOffset = cell < 2 ? 0.5 : 0;
+    return plane;
   }
 
   private makeDisc(name: string, radius: number, color: Color3, alpha = 1) {
@@ -583,6 +701,7 @@ export async function createGameScene(engine: Engine, canvas: HTMLCanvasElement,
     scene,
     startRun: world.startRun,
     purchase: world.purchase,
+    setDifficulty: world.setDifficulty,
     retry: world.retry,
     dispose: () => {
       canvas.removeEventListener("pointerdown", onPointerDown);
@@ -590,7 +709,7 @@ export async function createGameScene(engine: Engine, canvas: HTMLCanvasElement,
       scene.dispose();
     },
   };
-  if (new URLSearchParams(window.location.search).has("demo")) window.setTimeout(handle.startRun, 350);
+  if (new URLSearchParams(window.location.search).has("demo")) handle.startRun();
   return handle;
 }
 

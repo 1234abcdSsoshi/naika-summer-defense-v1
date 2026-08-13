@@ -8,5 +8,10 @@
 | Defense item sheet | 4アイテムとコインの下絵 | 線香、招き猫、蛙、達磨、コイン、クロマキー背景 | `/manus-storage/naika-defense-items_9bd6ed22.png` | アイテムの参照／切り出し元 |
 | Brand mark | ロゴ・favicon | 蚊取り線香の渦、羽、軒先を読む抽象記号 | `/manus-storage/naika-mark_1621aaa0.png` | ヘッダ・favicon |
 | Night defense loop | BGM | 92 BPM、D minor、箏・控えめな太鼓・尺八・鈴・夏夜の室内音、75秒で自然にループする設計 | `/manus-storage/naika-night-defense-loop_0b454f3f.mp3` | 開始操作後のゲーム中BGM |
+| Common mosquito sprite | 通常敵 | 小型の黒炭色の蚊、月白の羽、行灯橙の微光 | `/manus-storage/naika-mosquito-small-sprite_af4952dd.png` | 通常敵の描画 |
+| Fast mosquito sprite | 高速敵 | 細身の紺黒の蚊、後ろへ流れる羽、橙の腹部線 | `/manus-storage/naika-mosquito-fast-sprite_f65f8e38.png` | 高速敵の描画 |
+| Sturdy mosquito sprite | 強敵 | 太い墨黒の胴、広い藍の羽、朱印の印 | `/manus-storage/naika-mosquito-sturdy-sprite_87f8df86.png` | 強敵の描画 |
+| Defense item atlas | 道具の2x2スプライト | 線香、招き猫、蛙、達磨を木版画調で統一 | `/manus-storage/naika-defense-items-atlas_4c991078.png` | 道具トレイ・設置物の描画 |
+| Woodblock VFX atlas | 命中・撃破・落下・被弾の2x2VFX | 墨線、橙朱の印影、煙、ダメージ印 | `/manus-storage/naika-woodblock-vfx-atlas_9cc67c3a.png` | 画面内の短時間VFX |
 
 生成物は必ず使用前に、透過、輪郭、反復可能性、背景とのコントラストを確認する。現行プロトタイプでは、背景とロゴを直接利用し、人物・敵・道具は同一の色・シルエット指針に従ってBabylonの軽量図形として実装している。生成BGMはブラウザの自動再生制約を守るため、ユーザーの開始操作後にだけ再生する。

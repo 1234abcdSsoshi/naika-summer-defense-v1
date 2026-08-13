@@ -6,6 +6,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { createGameScene, type GameHandle, type HudState, type ItemId, type ResultState } from "@/game/scene";
+import { DIFFICULTY_PROFILES, type DifficultyId } from "@/game/difficulty";
+import { getLocalEventSummary } from "@/game/telemetry";
 
 const BRAND_MARK = "/manus-storage/naika-mark_1621aaa0.png";
 const BACKGROUND = "/manus-storage/naika-room-background_d0c50701.png";
@@ -42,6 +44,8 @@ export default function GameCanvas() {
   const [phase, setPhase] = useState<"title" | "playing" | "result">("title");
   const [hud, setHud] = useState<HudState>(initialHud);
   const [result, setResult] = useState<ResultState>({ score: 0, best: Number(localStorage.getItem("naika-high-score") ?? "0"), kills: 0, duration: 0 });
+  const [difficulty, setDifficulty] = useState<DifficultyId>("seasonal");
+  const [eventSummary, setEventSummary] = useState(() => getLocalEventSummary());
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -52,7 +56,10 @@ export default function GameCanvas() {
     createGameScene(engine, canvas, {
       onHud: setHud,
       onPhase: setPhase,
-      onResult: setResult,
+      onResult: (nextResult) => {
+        setResult(nextResult);
+        setEventSummary(getLocalEventSummary());
+      },
     }).then((handle) => {
       if (disposed) {
         handle.dispose();
@@ -79,9 +86,14 @@ export default function GameCanvas() {
       bgm.volume = 0.22;
       bgm.play().catch(() => undefined);
     }
+    handleRef.current?.setDifficulty(difficulty);
     handleRef.current?.startRun();
   };
   const buy = (item: ItemId) => handleRef.current?.purchase(item);
+  const chooseDifficulty = (nextDifficulty: DifficultyId) => {
+    setDifficulty(nextDifficulty);
+    handleRef.current?.setDifficulty(nextDifficulty);
+  };
   const returnToTitle = () => {
     const bgm = bgmRef.current;
     if (bgm) {
@@ -114,12 +126,15 @@ export default function GameCanvas() {
         </div>
       )}
 
+      {phase === "playing" && <div className="game-sleeper-anchor" aria-hidden="true"><span className="sleeper-face" /><span className="sleeper-futon" /><i /><i /><i /><small>寝息を守る</small></div>}
+
       {phase === "playing" && (
         <nav className="item-tray" aria-label="防衛道具">
           {(Object.keys(itemCopy) as ItemId[]).map((item) => {
             const data = hud.items[item];
             const ready = hud.coins >= data.price && !data.active;
             return <button key={item} className={`item-button ${ready ? "is-ready" : ""} ${data.active ? "is-active" : ""}`} onClick={() => buy(item)} disabled={data.active}>
+              <span className={`item-thumb item-thumb-${item}`} aria-hidden="true" />
               <span className="item-symbol">{itemCopy[item].symbol}</span>
               <span className="item-name">{itemCopy[item].name}</span>
               <span className="item-meta">{data.active ? (data.cooldown ? `${data.cooldown}s` : "稼働中") : `◒ ${data.price}`}</span>
@@ -134,6 +149,9 @@ export default function GameCanvas() {
           <p className="eyebrow">夏夜の防衛アクション</p>
           <h1 id="game-title"><em>内</em>蚊 <span>ないか</span></h1>
           <p className="title-copy">今夜、守るのは<br />ひとりぶんの寝息。</p>
+          <div className="difficulty-switch" role="group" aria-label="夜の気配を選ぶ">
+            {(Object.keys(DIFFICULTY_PROFILES) as DifficultyId[]).map((id) => <button key={id} className={difficulty === id ? "is-selected" : ""} onClick={() => chooseDifficulty(id)}><span>{DIFFICULTY_PROFILES[id].shortLabel}</span><small>{DIFFICULTY_PROFILES[id].description}</small></button>)}
+          </div>
           <button className="start-button" onClick={start}>夜を守る <span>→</span></button>
           <p className="title-note">蚊をタップし、落ちたコインで道具を置こう。</p>
         </section>
@@ -145,6 +163,7 @@ export default function GameCanvas() {
           <h2>寝息が、止まった。</h2>
           <div className="result-score"><span>得点</span><strong>{result.score.toLocaleString()}</strong></div>
           <dl><div><dt>最高点</dt><dd>{result.best.toLocaleString()}</dd></div><div><dt>退けた蚊</dt><dd>{result.kills}</dd></div><div><dt>守れた時間</dt><dd>{result.duration}秒</dd></div></dl>
+          {result.analytics && <div className="analysis-slip"><p>今夜の記録 <span>{DIFFICULTY_PROFILES[result.analytics.difficulty].shortLabel}</span></p><div><b>命中率 {Math.round(result.analytics.hitRate * 100)}%</b><b>被弾 {result.analytics.damageTaken}</b><b>脅威 {result.analytics.averageThreat.toFixed(2)}x</b></div><small>端末内イベント {eventSummary.events}件／完走 {eventSummary.completedRuns}回</small></div>}
           <button className="start-button" onClick={start}>もう一度、守る <span>↻</span></button>
           <button className="quiet-button" onClick={returnToTitle}>縁側へ戻る</button>
         </section>
