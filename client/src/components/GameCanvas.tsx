@@ -5,7 +5,7 @@
  */
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Engine } from "@babylonjs/core/Engines/engine";
-import { createGameScene, type GameHandle, type HudState, type ItemId, type KobanView, type MosquitoView, type PlacedItemView, type ResultState } from "@/game/scene";
+import { createGameScene, type FrogTongueView, type GameHandle, type HudState, type ItemId, type KobanView, type MosquitoView, type PlacedItemView, type ResultState } from "@/game/scene";
 import { DIFFICULTY_PROFILES, type DifficultyId } from "@/game/difficulty";
 import { getLocalEventSummary } from "@/game/telemetry";
 
@@ -49,6 +49,7 @@ export default function GameCanvas() {
   const [mosquitoes, setMosquitoes] = useState<MosquitoView[]>([]);
   const [kobans, setKobans] = useState<KobanView[]>([]);
   const [placedItems, setPlacedItems] = useState<PlacedItemView[]>([]);
+  const [frogTongue, setFrogTongue] = useState<FrogTongueView | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -61,6 +62,7 @@ export default function GameCanvas() {
       onMosquitoes: setMosquitoes,
       onKobans: setKobans,
       onPlacedItems: setPlacedItems,
+      onFrogTongue: setFrogTongue,
       onPhase: setPhase,
       onResult: (nextResult) => {
         setResult(nextResult);
@@ -119,7 +121,9 @@ export default function GameCanvas() {
       {phase === "playing" && <div className="placed-item-dom-layer" aria-live="polite" aria-label={`設置中の防衛道具 ${placedItems.length}個`}>{placedItems.map((item) => {
         const progress = item.duration === null ? 1 : Math.max(0, Math.min(1, (item.remaining ?? 0) / item.duration));
         const effectStyle = { left: `${((item.x + 4) / 8) * 100}%`, top: `${((7 - item.y) / 14) * 100}%`, "--range-size": `${Math.round(item.range * 68)}px`, "--range-color": item.tone, "--ring-progress": `${Math.round(progress * 360)}deg` } as CSSProperties;
-        return <div key={`${item.id}-${item.x}-${item.y}`} className={`placed-item-dom placed-item-${item.id}`} style={effectStyle}><span className="placed-item-range" aria-hidden="true" /><span className="placed-item-art" aria-hidden="true" /><span className="item-runtime-ring"><i>{item.duration === null ? "∞" : Math.ceil(item.remaining ?? 0)}</i></span><b>{itemCopy[item.id].name}</b></div>;
+        const tongueActive = item.id === "frog" && frogTongue && Math.abs(frogTongue.itemX - item.x) < 0.01 && Math.abs(frogTongue.itemY - item.y) < 0.01;
+        const tongueStyle = tongueActive ? { "--tongue-length": `${Math.max(30, Math.min(140, Math.hypot(frogTongue.targetX - item.x, frogTongue.targetY - item.y) * 65))}px`, "--tongue-angle": `${Math.atan2(-(frogTongue.targetY - item.y), frogTongue.targetX - item.x) * (180 / Math.PI)}deg` } as CSSProperties : undefined;
+        return <div key={`${item.id}-${item.x}-${item.y}`} className={`placed-item-dom placed-item-${item.id}`} style={effectStyle}><span className="placed-item-range" aria-hidden="true" /><span className="placed-item-art" aria-hidden="true" />{tongueActive && <span key={frogTongue.nonce} className="frog-tongue" style={tongueStyle} aria-hidden="true" />}<span className="item-runtime-ring"><i>{item.duration === null ? "∞" : Math.ceil(item.remaining ?? 0)}</i></span></div>;
       })}</div>}
       {phase === "title" && <div className="title-world-signals" aria-hidden="true"><span className="moon-disc" /><span className="lantern-ring ring-one" /><span className="lantern-ring ring-two" /><span className="mosquito-shape mosquito-one" /><span className="mosquito-shape mosquito-two" /><div className="sleeping-band"><i /><i /><i /></div></div>}
 

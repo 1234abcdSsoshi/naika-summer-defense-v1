@@ -51,12 +51,14 @@ export type ResultState = { score: number; best: number; kills: number; duration
 export type MosquitoView = { id: number; type: MosquitoType; x: number; y: number };
 export type KobanView = { id: number; x: number; y: number };
 export type PlacedItemView = { id: ItemId; x: number; y: number; range: number; duration: number | null; remaining: number | null; tone: string };
+export type FrogTongueView = { itemX: number; itemY: number; targetX: number; targetY: number; nonce: number };
 
 export type GameCallbacks = {
   onHud: (hud: HudState) => void;
   onMosquitoes: (mosquitoes: MosquitoView[]) => void;
   onKobans: (kobans: KobanView[]) => void;
   onPlacedItems: (items: PlacedItemView[]) => void;
+  onFrogTongue: (tongue: FrogTongueView | null) => void;
   onPhase: (phase: "title" | "playing" | "result") => void;
   onResult: (result: ResultState) => void;
 };
@@ -117,7 +119,7 @@ const ITEM_INFO: Record<ItemId, { price: number; label: string; color: Color3 }>
 const ITEM_RUNTIME: Record<ItemId, { duration: number | null; range: number; tone: string }> = {
   incense: { duration: 15, range: 1.5, tone: "#95ad62" },
   cat: { duration: 12, range: 2.25, tone: "#f6a33a" },
-  frog: { duration: null, range: 1.7, tone: "#88b76d" },
+  frog: { duration: 20, range: 1.7, tone: "#88b76d" },
   daruma: { duration: 12, range: 2.25, tone: "#cc5c4c" },
 };
 
@@ -168,8 +170,11 @@ class GameWorld {
   private readonly inspect = new URLSearchParams(window.location.search).has("inspect");
   private readonly rewardPreview = new URLSearchParams(window.location.search).has("reward");
   private readonly itemPreview = new URLSearchParams(window.location.search).has("item");
+  private readonly frogPreview = new URLSearchParams(window.location.search).has("frog");
   private rewardPreviewComplete = false;
   private itemPreviewComplete = false;
+  private frogPreviewComplete = false;
+  private frogTongueNonce = 0;
   private audioContext: AudioContext | null = null;
   private buzzOscillator: OscillatorNode | null = null;
   private buzzGain: GainNode | null = null;
@@ -218,6 +223,17 @@ class GameWorld {
     this.currentThreat = getAdaptiveThreat(this.health, this.hits / Math.max(1, this.taps), this.now);
     this.threatSum += this.currentThreat;
     this.threatSamples += 1;
+    if (this.frogPreview && !this.frogPreviewComplete && this.now > 0.2) {
+      const frog = this.placed.find((item) => item.id === "frog");
+      const target = this.mosquitoes.find((entry) => entry.state !== "falling");
+      if (frog && target) {
+        target.x = frog.x + 1.05;
+        target.y = frog.y + 0.05;
+        target.mesh.position.set(target.x, target.y, 0.45);
+        frog.nextActionAt = this.now;
+        this.frogPreviewComplete = true;
+      }
+    }
     this.updateItems();
     this.emitPlacedItemViews();
     if (this.now >= this.nextSpawnAt) this.spawnMosquito();
@@ -229,7 +245,7 @@ class GameWorld {
     this.updateVfx();
     if (this.itemPreview && !this.itemPreviewComplete && this.now > 0.12) {
       this.itemPreviewComplete = true;
-      this.placeItem("incense", -1.55, -0.45);
+      this.placeItem(this.frogPreview ? "frog" : "incense", -1.55, -0.45);
     }
     if (this.rewardPreview && !this.rewardPreviewComplete && this.now > 0.35) {
       const target = this.mosquitoes.find((entry) => entry.state !== "falling");
@@ -324,9 +340,11 @@ class GameWorld {
     this.nextKobanSyncAt = 0;
     this.rewardPreviewComplete = false;
     this.itemPreviewComplete = false;
+    this.frogPreviewComplete = false;
     this.callbacks.onMosquitoes([]);
     this.callbacks.onKobans([]);
     this.callbacks.onPlacedItems([]);
+    this.callbacks.onFrogTongue(null);
     this.playerRoot.scaling.setAll(1);
   }
 
@@ -410,15 +428,21 @@ class GameWorld {
         if (age > (ITEM_RUNTIME.cat.duration ?? 0)) this.removeItem(item, "招き猫はひと休み");
         else if (age > 8 && outer) outer.visibility = 0.5;
       }
-      if (item.id === "frog" && this.now >= item.nextActionAt) {
-        const target = this.mosquitoes
-          .filter((mosquito) => mosquito.state !== "falling" && distance(item.x, item.y, mosquito.x, mosquito.y) < 1.7)
-          .sort((a, b) => distance(a.x, a.y, 0, this.playerY) - distance(b.x, b.y, 0, this.playerY))[0];
-        if (target) {
-          item.nextActionAt = this.now + 1.7;
-          this.killMosquito(target, false);
-          item.mesh.scaling.y = 1.2;
-          window.setTimeout(() => item.mesh.scaling.y = 1, 120);
+      if (item.id === "frog") {
+        if (age > (ITEM_RUNTIME.frog.duration ?? 0)) this.removeItem(item, "カエルは水辺へ帰った");
+        else if (this.now >= item.nextActionAt) {
+          const target = this.mosquitoes
+            .filter((mosquito) => mosquito.state !== "falling" && distance(item.x, item.y, mosquito.x, mosquito.y) < ITEM_RUNTIME.frog.range)
+            .sort((a, b) => distance(a.x, a.y, item.x, item.y) - distance(b.x, b.y, item.x, item.y))[0];
+          if (target) {
+            item.nextActionAt = this.now + 1.7;
+            const tongue = { itemX: item.x, itemY: item.y, targetX: target.x, targetY: target.y, nonce: this.frogTongueNonce++ };
+            this.callbacks.onFrogTongue(tongue);
+            window.setTimeout(() => this.callbacks.onFrogTongue(null), 210);
+            this.killMosquito(target, false);
+            item.mesh.scaling.y = 1.2;
+            window.setTimeout(() => item.mesh.scaling.y = 1, 120);
+          }
         }
       }
       if (item.id === "daruma") {
