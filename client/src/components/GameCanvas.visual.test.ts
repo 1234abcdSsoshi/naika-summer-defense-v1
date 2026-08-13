@@ -115,4 +115,12 @@ describe("蚊と小判の描画仕様", () => {
     expect(sceneSource).toContain("underlayDisabled: !mesh.isEnabled()");
     expect(componentSource).toContain('data-babylon-underlay={item.underlayDisabled ? "disabled" : "enabled"}');
   });
+
+  it("招き猫は独立した前脚を自然な往復モーションで振る", () => {
+    expect(componentSource).toContain('className="cat-waving-paw"');
+    expect(componentSource).toContain('data-item-motion={item.id === "cat" ? "beckoning" : "static"}');
+    expect(styleSource).toContain("@keyframes cat-waving-paw");
+    expect(styleSource).toContain("animation: cat-waving-paw 1.68s");
+    expect(styleSource).toContain("@keyframes cat-body-bob");
+  });
 });
