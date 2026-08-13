@@ -183,9 +183,15 @@ class GameWorld {
   private buzzFilter: BiquadFilterNode | null = null;
   private readonly kobanCollectSfx = new Audio(KOBAN_COLLECT_SFX);
   private readonly itemPlaceSfx = new Audio(ITEM_PLACE_SFX);
+  private sfxVolume = clamp(Number(window.localStorage.getItem("naika-sfx-volume") ?? "1"), 0, 1);
+  private readonly onAudioSettings = (event: Event) => {
+    const detail = (event as CustomEvent<{ sfx?: number }>).detail;
+    if (typeof detail?.sfx === "number") this.sfxVolume = clamp(detail.sfx, 0, 1);
+  };
 
   constructor(private readonly scene: Scene, callbacks: GameCallbacks) {
     this.callbacks = callbacks;
+    window.addEventListener("naika-audio-settings", this.onAudioSettings);
     this.playerRoot = new TransformNode("sleeping-person", scene);
     this.playerRoot.position = new Vector3(0, this.playerY, 0.15);
     this.playerBody = this.makeDisc("player-body", 1.22, Color3.FromHexString("#E6D8BD"));
@@ -305,6 +311,7 @@ class GameWorld {
   };
 
   dispose = () => {
+    window.removeEventListener("naika-audio-settings", this.onAudioSettings);
     this.mosquitoes.forEach((entry) => entry.mesh.dispose());
     this.coinsOnFloor.forEach((entry) => entry.mesh.dispose());
     this.placed.forEach((entry) => entry.mesh.dispose());
@@ -802,7 +809,7 @@ class GameWorld {
       const gain = context.createGain();
       oscillator.type = type;
       oscillator.frequency.value = frequency;
-      gain.gain.setValueAtTime(volume, context.currentTime);
+      gain.gain.setValueAtTime(volume * this.sfxVolume, context.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + duration);
       oscillator.connect(gain).connect(context.destination);
       oscillator.start();
@@ -813,7 +820,7 @@ class GameWorld {
   private playInteractionSfx(source: HTMLAudioElement, volume: number) {
     try {
       const effect = source.cloneNode(true) as HTMLAudioElement;
-      effect.volume = volume;
+      effect.volume = volume * this.sfxVolume;
       effect.preload = "auto";
       void effect.play().catch(() => undefined);
     } catch { /* Sound effects are enhancements only. */ }
@@ -854,7 +861,7 @@ class GameWorld {
       .map((entry) => distance(entry.x, entry.y, 0, this.playerY))
       .sort((a, b) => a - b)[0];
     const proximity = nearest === undefined ? 0 : clamp(1 - nearest / 7.2, 0, 1);
-    const targetGain = 0.0001 + proximity * proximity * 0.075;
+    const targetGain = 0.0001 + proximity * proximity * 0.075 * this.sfxVolume;
     const tone = 172 + proximity * 116 + Math.sin(this.now * 10) * (4 + proximity * 8);
     gain.gain.setTargetAtTime(targetGain, context.currentTime, 0.065);
     oscillator.frequency.setTargetAtTime(tone, context.currentTime, 0.05);

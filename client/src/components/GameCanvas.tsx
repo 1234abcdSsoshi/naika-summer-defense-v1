@@ -49,6 +49,10 @@ export default function GameCanvas() {
   const [result, setResult] = useState<ResultState>({ score: 0, best: Number(localStorage.getItem("naika-high-score") ?? "0"), kills: 0, duration: 0 });
   const [difficulty, setDifficulty] = useState<DifficultyId>("seasonal");
   const [eventSummary, setEventSummary] = useState(() => getLocalEventSummary());
+  const [audioSettings, setAudioSettings] = useState(() => ({
+    bgm: Number(localStorage.getItem("naika-bgm-volume") ?? "0.10"),
+    sfx: Number(localStorage.getItem("naika-sfx-volume") ?? "1"),
+  }));
   const [mosquitoes, setMosquitoes] = useState<MosquitoView[]>([]);
   const [kobans, setKobans] = useState<KobanView[]>([]);
   const [placedItems, setPlacedItems] = useState<PlacedItemView[]>([]);
@@ -94,13 +98,21 @@ export default function GameCanvas() {
   const start = () => {
     const bgm = bgmRef.current;
     if (bgm) {
-      bgm.volume = 0.10;
+      bgm.volume = audioSettings.bgm;
       bgm.play().catch(() => undefined);
     }
     handleRef.current?.setDifficulty(difficulty);
     handleRef.current?.startRun();
   };
   const buy = (item: ItemId) => handleRef.current?.purchase(item);
+  const updateAudioSetting = (kind: "bgm" | "sfx", rawValue: string) => {
+    const value = Math.max(0, Math.min(1, Number(rawValue)));
+    const next = { ...audioSettings, [kind]: value };
+    setAudioSettings(next);
+    localStorage.setItem(`naika-${kind}-volume`, String(value));
+    if (kind === "bgm" && bgmRef.current) bgmRef.current.volume = value;
+    window.dispatchEvent(new CustomEvent("naika-audio-settings", { detail: next }));
+  };
   const chooseDifficulty = (nextDifficulty: DifficultyId) => {
     setDifficulty(nextDifficulty);
     handleRef.current?.setDifficulty(nextDifficulty);
@@ -119,6 +131,7 @@ export default function GameCanvas() {
       <audio ref={bgmRef} src={NIGHT_BGM} loop preload="auto" />
       <canvas ref={canvasRef} className="game-canvas" aria-label="内蚊のゲーム画面" style={{ touchAction: "none" }} />
       <div className="paper-grain" aria-hidden="true" />
+      {phase !== "result" && <aside className="audio-dock" aria-label="音量調整"><div className="audio-dock-title">音量</div><label><span aria-hidden="true">♫</span><input type="range" min="0" max="1" step="0.01" value={audioSettings.bgm} onInput={(event) => updateAudioSetting("bgm", event.currentTarget.value)} aria-label="BGM音量" /><small>BGM</small></label><label><span aria-hidden="true">✦</span><input type="range" min="0" max="1" step="0.01" value={audioSettings.sfx} onInput={(event) => updateAudioSetting("sfx", event.currentTarget.value)} aria-label="効果音音量" /><small>効果音</small></label></aside>}
       {phase === "playing" && <div className="enemy-dom-layer" aria-live="polite" aria-label={`接近中の蚊 ${mosquitoes.length}匹`}>{mosquitoes.map((mosquito) => <div key={mosquito.id} className={`enemy-dom enemy-dom-${mosquito.type}`} style={{ left: `${((mosquito.x + 4) / 8) * 100}%`, top: `${((7 - mosquito.y) / 14) * 100}%`, "--insect-atlas": `url(${INSECT_ATLAS})`, "--enemy-bank": `${mosquito.bank}deg`, "--enemy-scale": `${mosquito.scale}` } as CSSProperties}><span className="enemy-wing enemy-wing-left" /><span className="enemy-wing enemy-wing-right" /><span className="enemy-body" /><span className="enemy-legs" /></div>)}</div>}
       {phase === "playing" && <div className="koban-dom-layer" aria-live="polite" aria-label={`回収できる小判 ${kobans.length}枚`}>{kobans.map((koban) => <div key={koban.id} className="koban-dom" style={{ left: `${((koban.x + 4) / 8) * 100}%`, top: `${((7 - koban.y) / 14) * 100}%`, "--koban-asset": `url(${KOBAN_ASSET})` } as CSSProperties}><span>小判</span><i /></div>)}</div>}
       {phase === "playing" && <div className="placed-item-dom-layer" aria-live="polite" aria-label={`設置中の防衛道具 ${placedItems.length}個`}>{placedItems.map((item) => {
