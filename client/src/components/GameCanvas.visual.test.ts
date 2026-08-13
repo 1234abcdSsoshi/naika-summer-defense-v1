@@ -60,4 +60,15 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).toContain('"--tongue-origin-x"');
     expect(styleSource).toContain(".placed-item-frog.is-aiming .placed-item-art");
   });
+
+  it("アイテムの残り時間は右下の小型表示で、線香本体だけが回転する", () => {
+    expect(componentSource).toContain('className="incense-coil"');
+    expect(styleSource).toContain("top: auto; right: 2px; bottom: -4px");
+    expect(styleSource).toContain("width: 18px; height: 18px");
+    expect(styleSource).toContain("@keyframes incense-coil-turn");
+    expect(styleSource).toContain("animation: incense-coil-turn 5.6s linear infinite");
+    expect(sceneSource).not.toContain("item.mesh.rotation.z += 0.015");
+    expect(sceneSource).toContain("private readonly itemPreviewId: ItemId");
+    expect(sceneSource).toContain("private readonly itemPreviewHold");
+  });
 });

@@ -179,6 +179,11 @@ class GameWorld {
   private readonly visualCheck = new URLSearchParams(window.location.search).has("visual-check");
   private readonly rewardPreview = new URLSearchParams(window.location.search).has("reward");
   private readonly itemPreview = new URLSearchParams(window.location.search).has("item");
+  private readonly itemPreviewId: ItemId = (() => {
+    const item = new URLSearchParams(window.location.search).get("item");
+    return item === "cat" || item === "frog" || item === "daruma" || item === "incense" ? item : "incense";
+  })();
+  private readonly itemPreviewHold = new URLSearchParams(window.location.search).has("item-hold");
   private readonly frogPreview = new URLSearchParams(window.location.search).has("frog");
   private readonly frogPreviewSlow = new URLSearchParams(window.location.search).has("frog-slow");
   private readonly frogPreviewPull = new URLSearchParams(window.location.search).has("frog-pull");
@@ -272,7 +277,7 @@ class GameWorld {
     this.updateVfx();
     if (this.itemPreview && !this.itemPreviewComplete && this.now > 0.12) {
       this.itemPreviewComplete = true;
-      this.placeItem(this.frogPreview ? "frog" : "incense", -1.55, -0.45);
+      this.placeItem(this.frogPreview ? "frog" : this.itemPreviewId, -1.55, -0.45);
     }
     if (this.frogCoinCheck && !this.frogCoinCheckComplete && this.now > 0.18) {
       this.frogCoinCheckComplete = true;
@@ -475,9 +480,8 @@ class GameWorld {
       const age = this.now - item.bornAt;
       const outer = item.mesh.getChildMeshes()[0];
       if (item.id === "incense") {
-        item.mesh.rotation.z += 0.015;
         item.mesh.scaling.setAll(Math.max(0.72, 1 - age / 64));
-        if (age > 15) this.removeItem(item, "線香の煙が消えた");
+        if (age > 15 && !this.itemPreviewHold) this.removeItem(item, "線香の煙が消えた");
         for (const mosquito of this.mosquitoes) if (mosquito.state !== "falling" && distance(item.x, item.y, mosquito.x, mosquito.y) < 1.5) this.killMosquito(mosquito, false);
       }
       if (item.id === "cat") {
@@ -526,7 +530,7 @@ class GameWorld {
       }
       if (item.id === "daruma") {
         item.mesh.rotation.z = Math.sin(this.now * 6) * 0.1;
-        if (age > (ITEM_RUNTIME.daruma.duration ?? 0)) this.removeItem(item, "ダルマは回収を終えた");
+        if (age > (ITEM_RUNTIME.daruma.duration ?? 0) && !this.itemPreviewHold) this.removeItem(item, "ダルマは回収を終えた");
         if (this.now >= item.nextActionAt) {
           item.nextActionAt = this.now + 0.35;
           const coin = this.coinsOnFloor.find((entry) => distance(item.x, item.y, entry.x, entry.y) < 2.25);
