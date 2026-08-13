@@ -99,4 +99,20 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain(".koban-dom { width: 29px; height: 24px");
     expect(sceneSource).toContain("this.spawnCoin(mosquito.x, mosquito.y, info.coin)");
   });
+
+  it("設置アイテムのBabylon下層スプライト・円盤は表示しない", () => {
+    const placeItem = sceneSource.match(/private placeItem\([\s\S]*?private removeItem/)?.[0] ?? "";
+    expect(placeItem).toContain("root.setEnabled(false)");
+    expect(placeItem).toContain("DOMオーバーレイのみを使用する");
+  });
+
+  it("確認用の設置アイテム表示は全種類で保持できる", () => {
+    expect(sceneSource).toContain('item.id === "cat"');
+    expect(sceneSource).toContain("&& !this.itemPreviewHold");
+  });
+
+  it("設置アイテムはBabylon下層の無効化状態をDOM検証属性へ公開する", () => {
+    expect(sceneSource).toContain("underlayDisabled: !mesh.isEnabled()");
+    expect(componentSource).toContain('data-babylon-underlay={item.underlayDisabled ? "disabled" : "enabled"}');
+  });
 });

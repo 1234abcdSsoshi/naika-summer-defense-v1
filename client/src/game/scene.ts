@@ -52,7 +52,7 @@ export type HudState = {
 export type ResultState = { score: number; best: number; kills: number; duration: number; analytics?: RunAnalytics };
 export type MosquitoView = { id: number; type: MosquitoType; x: number; y: number; bank: number; scale: number };
 export type KobanView = { id: number; x: number; y: number };
-export type PlacedItemView = { key: string; id: ItemId; x: number; y: number; range: number; duration: number | null; remaining: number | null; tone: string };
+export type PlacedItemView = { key: string; id: ItemId; x: number; y: number; range: number; duration: number | null; remaining: number | null; tone: string; underlayDisabled: boolean };
 export type FrogTongueView = { itemX: number; itemY: number; targetX: number; targetY: number; nonce: number; phase: "aim" | "pull" };
 
 export type GameCallbacks = {
@@ -494,7 +494,7 @@ class GameWorld {
       }
       if (item.id === "cat") {
         item.mesh.rotation.z = Math.sin(this.now * 10) * 0.08;
-        if (age > (ITEM_RUNTIME.cat.duration ?? 0)) this.removeItem(item, "招き猫はひと休み");
+        if (age > (ITEM_RUNTIME.cat.duration ?? 0) && !this.itemPreviewHold) this.removeItem(item, "招き猫はひと休み");
         else if (age > 8 && outer) outer.visibility = 0.5;
       }
       if (item.id === "frog") {
@@ -738,6 +738,9 @@ class GameWorld {
       eyeR.position.x = 0.12;
       eyeR.parent = root;
     }
+    // 設置アイテムの見た目はDOMオーバーレイのみを使用する。Babylon側の
+    // スプライト・グロー・補助ディスクは背後で白い円盤に見えるため描画しない。
+    root.setEnabled(false);
     this.placed.push({ id, x: safeX, y: safeY, originX: safeX, originY: safeY, bornAt: this.now, mesh: root, nextActionAt: this.now + 0.5, nextCollectAt: this.now + 0.12 });
     this.emitPlacedItemViews();
     this.placement = null;
@@ -758,7 +761,7 @@ class GameWorld {
     this.callbacks.onPlacedItems(this.placed.map(({ id, x, y, bornAt, mesh }) => {
       const runtime = ITEM_RUNTIME[id];
       const remaining = runtime.duration === null ? null : Math.max(0, runtime.duration - (this.now - bornAt));
-      return { key: mesh.name, id, x, y, range: runtime.range, duration: runtime.duration, remaining, tone: runtime.tone };
+      return { key: mesh.name, id, x, y, range: runtime.range, duration: runtime.duration, remaining, tone: runtime.tone, underlayDisabled: !mesh.isEnabled() };
     }));
   }
 
