@@ -5,7 +5,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { Engine } from "@babylonjs/core/Engines/engine";
-import { createGameScene, type GameHandle, type HudState, type ItemId, type ResultState } from "@/game/scene";
+import { createGameScene, type GameHandle, type HudState, type ItemId, type MosquitoView, type ResultState } from "@/game/scene";
 import { DIFFICULTY_PROFILES, type DifficultyId } from "@/game/difficulty";
 import { getLocalEventSummary } from "@/game/telemetry";
 
@@ -46,6 +46,7 @@ export default function GameCanvas() {
   const [result, setResult] = useState<ResultState>({ score: 0, best: Number(localStorage.getItem("naika-high-score") ?? "0"), kills: 0, duration: 0 });
   const [difficulty, setDifficulty] = useState<DifficultyId>("seasonal");
   const [eventSummary, setEventSummary] = useState(() => getLocalEventSummary());
+  const [mosquitoes, setMosquitoes] = useState<MosquitoView[]>([]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -55,6 +56,7 @@ export default function GameCanvas() {
     let disposed = false;
     createGameScene(engine, canvas, {
       onHud: setHud,
+      onMosquitoes: setMosquitoes,
       onPhase: setPhase,
       onResult: (nextResult) => {
         setResult(nextResult);
@@ -108,6 +110,7 @@ export default function GameCanvas() {
       <audio ref={bgmRef} src={NIGHT_BGM} loop preload="auto" />
       <canvas ref={canvasRef} className="game-canvas" aria-label="内蚊のゲーム画面" style={{ touchAction: "none" }} />
       <div className="paper-grain" aria-hidden="true" />
+      {phase === "playing" && <div className="enemy-dom-layer" aria-live="polite" aria-label={`接近中の蚊 ${mosquitoes.length}匹`}>{mosquitoes.map((mosquito) => <div key={mosquito.id} className={`enemy-dom enemy-dom-${mosquito.type}`} style={{ left: `${((mosquito.x + 4) / 8) * 100}%`, top: `${((7 - mosquito.y) / 14) * 100}%` }}><span className="enemy-wing enemy-wing-left" /><span className="enemy-wing enemy-wing-right" /><span className="enemy-body" /><span className="enemy-legs" /></div>)}</div>}
       {phase === "title" && <div className="title-world-signals" aria-hidden="true"><span className="moon-disc" /><span className="lantern-ring ring-one" /><span className="lantern-ring ring-two" /><span className="mosquito-shape mosquito-one" /><span className="mosquito-shape mosquito-two" /><div className="sleeping-band"><i /><i /><i /></div></div>}
 
       {phase !== "title" && (

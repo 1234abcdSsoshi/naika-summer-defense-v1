@@ -48,9 +48,11 @@ export type HudState = {
 };
 
 export type ResultState = { score: number; best: number; kills: number; duration: number; analytics?: RunAnalytics };
+export type MosquitoView = { id: number; type: MosquitoType; x: number; y: number };
 
 export type GameCallbacks = {
   onHud: (hud: HudState) => void;
+  onMosquitoes: (mosquitoes: MosquitoView[]) => void;
   onPhase: (phase: "title" | "playing" | "result") => void;
   onResult: (result: ResultState) => void;
 };
@@ -144,6 +146,7 @@ class GameWorld {
   private itemsPlaced = 0;
   private threatSum = 0;
   private threatSamples = 0;
+  private nextMosquitoSyncAt = 0;
   private readonly telemetry = new GameplayTelemetry();
   private readonly playerRoot: TransformNode;
   private readonly playerHead: AbstractMesh;
@@ -179,6 +182,7 @@ class GameWorld {
     this.running = true;
     this.telemetry.start(this.difficulty);
     this.callbacks.onPhase("playing");
+    this.emitMosquitoViews(true);
     this.emitHud(`${DIFFICULTY_PROFILES[this.difficulty].label}。蚊を落として、寝息を守ろう`);
   };
 
@@ -201,6 +205,7 @@ class GameWorld {
     this.updateItems();
     if (this.now >= this.nextSpawnAt) this.spawnMosquito();
     this.updateMosquitoes(safeDelta);
+    this.emitMosquitoViews();
     this.updateMosquitoBuzz();
     this.updateCoins(safeDelta);
     this.updateVfx();
@@ -286,6 +291,8 @@ class GameWorld {
     this.itemsPlaced = 0;
     this.threatSum = 0;
     this.threatSamples = 0;
+    this.nextMosquitoSyncAt = 0;
+    this.callbacks.onMosquitoes([]);
     this.playerRoot.scaling.setAll(1);
   }
 
@@ -301,7 +308,7 @@ class GameWorld {
     if (this.mosquitoes.filter((entry) => entry.state !== "falling").length >= activeCap) return;
     const info = MOSQUITO_INFO[type];
     const x = -3.35 + this.random() * 6.7;
-    const y = 4.25 + this.random() * 0.6;
+    const y = 3.45 + this.random() * 0.65;
     const root = new TransformNode(`mosquito-${this.mosquitoId}`, this.scene);
     root.position = new Vector3(x, y, 0.62);
     this.makeMosquitoSilhouette(`mosquito-ink-${this.mosquitoId}`, type).parent = root;
@@ -309,6 +316,7 @@ class GameWorld {
     sprite.parent = root;
     sprite.position.z = 0.035;
     this.mosquitoes.push({ id: this.mosquitoId++, type, hp: info.hp, state: "approaching", x, y, vx: 0, vy: 0, speed: info.speed, biteAt: 0, fallingFor: 0, mesh: root });
+    this.emitMosquitoViews(true);
     this.telemetry.track("enemy_spawned", { type, stage, threat: Number(this.currentThreat.toFixed(2)), difficulty: this.difficulty });
   }
 
@@ -390,6 +398,14 @@ class GameWorld {
         }
       }
     }
+  }
+
+  private emitMosquitoViews(force = false) {
+    if (!force && this.now < this.nextMosquitoSyncAt) return;
+    this.nextMosquitoSyncAt = this.now + 0.05;
+    this.callbacks.onMosquitoes(this.mosquitoes
+      .filter((entry) => entry.state !== "falling")
+      .map(({ id, type, x, y }) => ({ id, type, x, y })));
   }
 
   private updateCoins(_delta: number) {
