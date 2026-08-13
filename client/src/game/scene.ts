@@ -52,7 +52,7 @@ export type HudState = {
 export type ResultState = { score: number; best: number; kills: number; duration: number; analytics?: RunAnalytics };
 export type MosquitoView = { id: number; type: MosquitoType; x: number; y: number; bank: number; scale: number };
 export type KobanView = { id: number; x: number; y: number };
-export type PlacedItemView = { id: ItemId; x: number; y: number; range: number; duration: number | null; remaining: number | null; tone: string };
+export type PlacedItemView = { key: string; id: ItemId; x: number; y: number; range: number; duration: number | null; remaining: number | null; tone: string };
 export type FrogTongueView = { itemX: number; itemY: number; targetX: number; targetY: number; nonce: number; phase: "aim" | "pull" };
 
 export type GameCallbacks = {
@@ -100,12 +100,18 @@ type Coin = {
   y: number;
   bornAt: number;
   mesh: TransformNode;
+  attractToX?: number;
+  attractToY?: number;
+  attractItemKey?: string;
+  attractNotice?: string;
 };
 
 type PlacedItem = {
   id: ItemId;
   x: number;
   y: number;
+  originX: number;
+  originY: number;
   bornAt: number;
   mesh: TransformNode;
   nextActionAt: number;
@@ -188,6 +194,8 @@ class GameWorld {
   private readonly frogPreviewSlow = new URLSearchParams(window.location.search).has("frog-slow");
   private readonly frogPreviewPull = new URLSearchParams(window.location.search).has("frog-pull");
   private readonly frogCoinCheck = new URLSearchParams(window.location.search).has("frog-coin-check");
+  private readonly darumaPreviewPull = new URLSearchParams(window.location.search).has("daruma-pull");
+  private readonly darumaCoinCheck = new URLSearchParams(window.location.search).has("daruma-coin-check");
   private rewardPreviewComplete = false;
   private itemPreviewComplete = false;
   private frogPreviewComplete = false;
@@ -228,8 +236,8 @@ class GameWorld {
     this.unlockAudio();
     this.running = true;
     if (this.visualCheck) {
-      this.spawnMosquito();
-      this.spawnCoin(-1.25, 1.55, 1);
+      if (!this.darumaPreviewPull && !this.darumaCoinCheck) this.spawnMosquito();
+      this.spawnCoin(this.darumaCoinCheck ? -1.12 : -1.25, this.darumaCoinCheck ? -0.45 : 1.55, 1);
       this.nextSpawnAt = Number.POSITIVE_INFINITY;
     }
     if (this.frogCoinCheck) this.nextSpawnAt = Number.POSITIVE_INFINITY;
@@ -529,12 +537,21 @@ class GameWorld {
         }
       }
       if (item.id === "daruma") {
-        item.mesh.rotation.z = Math.sin(this.now * 6) * 0.1;
+        const travel = age * 0.92 + item.originX * 0.6 - item.originY * 0.35;
+        item.x = clamp(item.originX + Math.sin(travel * 1.17) * 1.12, -3.1, 3.1);
+        item.y = clamp(item.originY + Math.cos(travel * 0.83) * 0.86, -2.4, 3.85);
+        item.mesh.position.set(item.x, item.y, 0.35);
+        item.mesh.rotation.z = Math.sin(this.now * 8) * 0.08;
         if (age > (ITEM_RUNTIME.daruma.duration ?? 0) && !this.itemPreviewHold) this.removeItem(item, "ダルマは回収を終えた");
         if (this.now >= item.nextActionAt) {
-          item.nextActionAt = this.now + 0.35;
-          const coin = this.coinsOnFloor.find((entry) => distance(item.x, item.y, entry.x, entry.y) < 2.25);
-          if (coin) this.collectCoin(coin, "ダルマが回収 +1");
+          item.nextActionAt = this.now + 0.16;
+          const coin = this.coinsOnFloor
+            .filter((entry) => !entry.attractItemKey && distance(item.x, item.y, entry.x, entry.y) < ITEM_RUNTIME.daruma.range)
+            .sort((a, b) => distance(item.x, item.y, a.x, a.y) - distance(item.x, item.y, b.x, b.y))[0];
+          if (coin) {
+            coin.attractItemKey = item.mesh.name;
+            coin.attractNotice = "ダルマが小判を吸い寄せた +1";
+          }
         }
       }
     }
@@ -554,9 +571,33 @@ class GameWorld {
     this.callbacks.onKobans(this.coinsOnFloor.map(({ id, x, y }) => ({ id, x, y })));
   }
 
-  private updateCoins(_delta: number) {
+  private updateCoins(delta: number) {
     for (const coin of [...this.coinsOnFloor]) {
       const age = this.now - coin.bornAt;
+      if (coin.attractItemKey) {
+        const daruma = this.placed.find((item) => item.mesh.name === coin.attractItemKey);
+        if (daruma) {
+          coin.attractToX = daruma.x;
+          coin.attractToY = daruma.y + 0.06;
+        } else {
+          coin.attractItemKey = undefined;
+          coin.attractToX = undefined;
+          coin.attractToY = undefined;
+        }
+      }
+      if (coin.attractToX !== undefined && coin.attractToY !== undefined) {
+        const dx = coin.attractToX - coin.x;
+        const dy = coin.attractToY - coin.y;
+        const gap = Math.hypot(dx, dy);
+        const pullRate = this.darumaPreviewPull ? 0.16 : 2.4 + 2.6 / Math.max(0.35, gap);
+        const pull = Math.min(1, delta * pullRate);
+        coin.x += dx * pull;
+        coin.y += dy * pull;
+        if (gap < 0.17) {
+          this.collectCoin(coin, coin.attractNotice ?? "ダルマが小判を吸い寄せた +1");
+          continue;
+        }
+      }
       coin.mesh.position.y = coin.y + Math.sin(age * 9) * 0.08;
       coin.mesh.rotation.z += 0.08;
       if (this.visualCheck) continue;
@@ -697,7 +738,7 @@ class GameWorld {
       eyeR.position.x = 0.12;
       eyeR.parent = root;
     }
-    this.placed.push({ id, x: safeX, y: safeY, bornAt: this.now, mesh: root, nextActionAt: this.now + 0.5, nextCollectAt: this.now + 0.12 });
+    this.placed.push({ id, x: safeX, y: safeY, originX: safeX, originY: safeY, bornAt: this.now, mesh: root, nextActionAt: this.now + 0.5, nextCollectAt: this.now + 0.12 });
     this.emitPlacedItemViews();
     this.placement = null;
     this.itemsPlaced += 1;
@@ -714,10 +755,10 @@ class GameWorld {
   }
 
   private emitPlacedItemViews() {
-    this.callbacks.onPlacedItems(this.placed.map(({ id, x, y, bornAt }) => {
+    this.callbacks.onPlacedItems(this.placed.map(({ id, x, y, bornAt, mesh }) => {
       const runtime = ITEM_RUNTIME[id];
       const remaining = runtime.duration === null ? null : Math.max(0, runtime.duration - (this.now - bornAt));
-      return { id, x, y, range: runtime.range, duration: runtime.duration, remaining, tone: runtime.tone };
+      return { key: mesh.name, id, x, y, range: runtime.range, duration: runtime.duration, remaining, tone: runtime.tone };
     }));
   }
 

@@ -34,7 +34,7 @@ describe("蚊と小判の描画仕様", () => {
     const startRun = sceneSource.match(/startRun = \(\) => \{[\s\S]*?this\.callbacks\.onPhase\("playing"\)/)?.[0] ?? "";
     expect(startRun).toContain("if (this.visualCheck)");
     expect(startRun).toContain("this.spawnMosquito()");
-    expect(startRun).toContain("this.spawnCoin(-1.25, 1.55, 1)");
+    expect(startRun).toContain("this.spawnCoin(this.darumaCoinCheck ? -1.12 : -1.25, this.darumaCoinCheck ? -0.45 : 1.55, 1)");
   });
 
   it("確認専用画面では小判を保持してDOM検証できる", () => {
@@ -70,5 +70,21 @@ describe("蚊と小判の描画仕様", () => {
     expect(sceneSource).not.toContain("item.mesh.rotation.z += 0.015");
     expect(sceneSource).toContain("private readonly itemPreviewId: ItemId");
     expect(sceneSource).toContain("private readonly itemPreviewHold");
+  });
+
+  it("だるまはフィールドを巡回し、小判を吸い寄せてから回収する", () => {
+    expect(sceneSource).toContain("originX: number");
+    expect(sceneSource).toContain("Math.sin(travel * 1.17) * 1.12");
+    expect(sceneSource).toContain("coin.attractItemKey = item.mesh.name");
+    expect(sceneSource).toContain("const daruma = this.placed.find((item) => item.mesh.name === coin.attractItemKey)");
+    expect(sceneSource).toContain("coin.attractNotice = \"ダルマが小判を吸い寄せた +1\"");
+    expect(sceneSource).toContain("const pull = Math.min(1, delta * pullRate)");
+    expect(sceneSource).toContain("private readonly darumaPreviewPull");
+    expect(sceneSource).toContain("const pullRate = this.darumaPreviewPull ? 0.16");
+    expect(sceneSource).toContain("if (!this.darumaPreviewPull && !this.darumaCoinCheck) this.spawnMosquito()");
+    expect(sceneSource).toContain("private readonly darumaCoinCheck");
+    expect(sceneSource).toContain("this.darumaCoinCheck ? -1.12 : -1.25");
+    expect(componentSource).toContain("key={item.key}");
+    expect(styleSource).toContain("@keyframes daruma-travel-bob");
   });
 });
