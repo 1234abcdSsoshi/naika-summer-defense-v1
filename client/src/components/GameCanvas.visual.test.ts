@@ -15,7 +15,7 @@ describe("蚊と小判の描画仕様", () => {
 
   it("最終スタイルで蚊と小判にドロップシャドウを付与しない", () => {
     const finalEnemyStyle = styleSource.match(/\.enemy-dom \{ width: 52px;[^\n]+/)?.[0] ?? "";
-    const finalKobanStyle = styleSource.match(/\.koban-dom \{ width: 43px;[^\n]+/)?.[0] ?? "";
+    const finalKobanStyle = styleSource.match(/\.koban-dom \{ width: 29px;[^\n]+/)?.[0] ?? "";
     expect(finalEnemyStyle).toContain("filter: none");
     expect(finalKobanStyle).toContain("box-shadow: none");
     expect(finalKobanStyle).toContain("filter: none");
@@ -93,5 +93,10 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).toContain('aria-label="小判"');
     expect(componentSource).not.toContain('<div className="coin-readout"><span>◒</span>');
     expect(styleSource).toContain(".hud-koban { display: inline-block; width: 19px; height: 15px");
+  });
+
+  it("フィールドに出現する小判は従来の約2/3の大きさで表示する", () => {
+    expect(styleSource).toContain(".koban-dom { width: 29px; height: 24px");
+    expect(sceneSource).toContain("this.spawnCoin(mosquito.x, mosquito.y, info.coin)");
   });
 });
