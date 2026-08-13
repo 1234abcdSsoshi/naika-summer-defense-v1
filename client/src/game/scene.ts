@@ -50,11 +50,13 @@ export type HudState = {
 export type ResultState = { score: number; best: number; kills: number; duration: number; analytics?: RunAnalytics };
 export type MosquitoView = { id: number; type: MosquitoType; x: number; y: number };
 export type KobanView = { id: number; x: number; y: number };
+export type PlacedItemView = { id: ItemId; x: number; y: number };
 
 export type GameCallbacks = {
   onHud: (hud: HudState) => void;
   onMosquitoes: (mosquitoes: MosquitoView[]) => void;
   onKobans: (kobans: KobanView[]) => void;
+  onPlacedItems: (items: PlacedItemView[]) => void;
   onPhase: (phase: "title" | "playing" | "result") => void;
   onResult: (result: ResultState) => void;
 };
@@ -158,7 +160,9 @@ class GameWorld {
   private readonly demo = new URLSearchParams(window.location.search).has("demo");
   private readonly inspect = new URLSearchParams(window.location.search).has("inspect");
   private readonly rewardPreview = new URLSearchParams(window.location.search).has("reward");
+  private readonly itemPreview = new URLSearchParams(window.location.search).has("item");
   private rewardPreviewComplete = false;
+  private itemPreviewComplete = false;
   private audioContext: AudioContext | null = null;
   private buzzOscillator: OscillatorNode | null = null;
   private buzzGain: GainNode | null = null;
@@ -215,6 +219,10 @@ class GameWorld {
     this.updateCoins(safeDelta);
     this.emitKobanViews();
     this.updateVfx();
+    if (this.itemPreview && !this.itemPreviewComplete && this.now > 0.12) {
+      this.itemPreviewComplete = true;
+      this.placeItem("incense", -1.55, -0.45);
+    }
     if (this.rewardPreview && !this.rewardPreviewComplete && this.now > 0.35) {
       const target = this.mosquitoes.find((entry) => entry.state !== "falling");
       if (target) {
@@ -307,8 +315,10 @@ class GameWorld {
     this.nextMosquitoSyncAt = 0;
     this.nextKobanSyncAt = 0;
     this.rewardPreviewComplete = false;
+    this.itemPreviewComplete = false;
     this.callbacks.onMosquitoes([]);
     this.callbacks.onKobans([]);
+    this.callbacks.onPlacedItems([]);
     this.playerRoot.scaling.setAll(1);
   }
 
@@ -533,7 +543,7 @@ class GameWorld {
 
   private placeItem(id: ItemId, x: number, y: number) {
     const safeX = clamp(x, -3.1, 3.1);
-    const safeY = clamp(y, -3.25, 3.85);
+    const safeY = clamp(y, -2.4, 3.85);
     const root = new TransformNode(`item-${id}-${this.placed.length}`, this.scene);
     root.position = new Vector3(safeX, safeY, 0.35);
     const color = ITEM_INFO[id].color;
@@ -569,6 +579,7 @@ class GameWorld {
       eyeR.parent = root;
     }
     this.placed.push({ id, x: safeX, y: safeY, bornAt: this.now, mesh: root, nextActionAt: this.now + 0.5 });
+    this.emitPlacedItemViews();
     this.placement = null;
     this.itemsPlaced += 1;
     this.playTone(460, 0.09, "triangle", 0.06);
@@ -579,7 +590,12 @@ class GameWorld {
   private removeItem(item: PlacedItem, notice: string) {
     item.mesh.dispose();
     this.placed = this.placed.filter((entry) => entry !== item);
+    this.emitPlacedItemViews();
     this.emitHud(notice);
+  }
+
+  private emitPlacedItemViews() {
+    this.callbacks.onPlacedItems(this.placed.map(({ id, x, y }) => ({ id, x, y })));
   }
 
   private endRun() {
