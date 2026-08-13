@@ -82,7 +82,8 @@ export default function GameCanvas() {
       }
       handleRef.current = handle;
       engine.runRenderLoop(() => handle.scene.render());
-      if (new URLSearchParams(window.location.search).has("visual-check")) {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has("visual-check") || params.has("frog-coin-check")) {
         handle.startRun();
       }
     });
@@ -140,9 +141,14 @@ export default function GameCanvas() {
       {phase === "playing" && <div className="placed-item-dom-layer" aria-live="polite" aria-label={`設置中の防衛道具 ${placedItems.length}個`}>{placedItems.map((item) => {
         const progress = item.duration === null ? 1 : Math.max(0, Math.min(1, (item.remaining ?? 0) / item.duration));
         const effectStyle = { left: `${((item.x + 4) / 8) * 100}%`, top: `${((7 - item.y) / 14) * 100}%`, "--range-size": `${Math.round(item.range * 68)}px`, "--range-color": item.tone, "--ring-progress": `${Math.round(progress * 360)}deg`, "--defense-atlas": `url(${DEFENSE_ATLAS})` } as CSSProperties;
-        const tongueActive = item.id === "frog" && frogTongue && Math.abs(frogTongue.itemX - item.x) < 0.01 && Math.abs(frogTongue.itemY - item.y) < 0.01;
-        const tongueStyle = tongueActive ? { "--tongue-length": `${Math.max(30, Math.min(140, Math.hypot(frogTongue.targetX - item.x, frogTongue.targetY - item.y) * 65))}px`, "--tongue-angle": `${Math.atan2(-(frogTongue.targetY - item.y), frogTongue.targetX - item.x) * (180 / Math.PI)}deg` } as CSSProperties : undefined;
-        return <div key={`${item.id}-${item.x}-${item.y}`} className={`placed-item-dom placed-item-${item.id} ${tongueActive ? "is-striking" : ""}`} style={effectStyle}><span className="placed-item-range" aria-hidden="true" /><span className="placed-item-art" aria-hidden="true" />{item.id === "frog" && <span className={`frog-mouth ${tongueActive ? "is-open" : ""}`} aria-hidden="true" />}{tongueActive && <span key={frogTongue.nonce} className="frog-tongue" style={tongueStyle} aria-hidden="true" />}<span className="item-runtime-ring"><i>{item.duration === null ? "∞" : Math.ceil(item.remaining ?? 0)}</i></span></div>;
+        const activeFrogTongue = item.id === "frog" && frogTongue && Math.abs(frogTongue.itemX - item.x) < 0.01 && Math.abs(frogTongue.itemY - item.y) < 0.01 ? frogTongue : null;
+        const frogActive = Boolean(activeFrogTongue);
+        const tonguePulling = activeFrogTongue?.phase === "pull";
+        const tongueAngle = activeFrogTongue ? Math.atan2(-(activeFrogTongue.targetY - item.y), activeFrogTongue.targetX - item.x) : 0;
+        const mouthX = 36 + Math.cos(tongueAngle) * 17;
+        const mouthY = 23 + Math.sin(tongueAngle) * 17;
+        const tongueStyle = activeFrogTongue ? { "--tongue-length": `${Math.max(30, Math.min(140, Math.hypot(activeFrogTongue.targetX - item.x, activeFrogTongue.targetY - item.y) * 65))}px`, "--tongue-angle": `${tongueAngle * (180 / Math.PI)}deg`, "--frog-turn": `${tongueAngle * (180 / Math.PI)}deg`, "--frog-mouth-x": `${mouthX}px`, "--frog-mouth-y": `${mouthY}px`, "--tongue-origin-x": `${mouthX}px`, "--tongue-origin-y": `${mouthY}px` } as CSSProperties : undefined;
+        return <div key={`${item.id}-${item.x}-${item.y}`} className={`placed-item-dom placed-item-${item.id} ${frogActive ? "is-aiming" : ""} ${tonguePulling ? "is-striking" : ""}`} style={{ ...effectStyle, ...tongueStyle }}><span className="placed-item-range" aria-hidden="true" /><span className="placed-item-art" aria-hidden="true" />{item.id === "frog" && <span className={`frog-mouth ${frogActive ? "is-open" : ""}`} aria-hidden="true" />}{tonguePulling && <span key={activeFrogTongue?.nonce ?? 0} className="frog-tongue" aria-hidden="true" />}<span className="item-runtime-ring"><i>{item.duration === null ? "∞" : Math.ceil(item.remaining ?? 0)}</i></span></div>;
       })}</div>}
       {phase === "title" && <div className="title-world-signals" aria-hidden="true"><span className="moon-disc" /><span className="lantern-ring ring-one" /><span className="lantern-ring ring-two" /><span className="mosquito-shape mosquito-one" /><span className="mosquito-shape mosquito-two" /><div className="sleeping-band"><i /><i /><i /></div></div>}
 

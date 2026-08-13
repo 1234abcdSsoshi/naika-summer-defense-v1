@@ -41,4 +41,23 @@ describe("蚊と小判の描画仕様", () => {
     const updateCoins = sceneSource.match(/private updateCoins\([\s\S]*?private runDemo/)?.[0] ?? "";
     expect(updateCoins).toContain("if (this.visualCheck) continue");
   });
+
+  it("カエルは方向を定めた舌で蚊を引き寄せ、小判を自動回収する", () => {
+    expect(sceneSource).toContain('type MosquitoState = "approaching" | "feeding" | "captured" | "falling"');
+    expect(sceneSource).toContain('target.state = "captured"');
+    expect(sceneSource).toContain("target.captureTargetX");
+    expect(sceneSource).toContain('this.collectCoin(coin, "カエルが小判を飲み込んだ +1")');
+    expect(sceneSource).toContain('phase: "aim" as const');
+    expect(sceneSource).toContain('phase: "pull"');
+    expect(sceneSource).toContain("frogPreviewSlow");
+    expect(sceneSource).toContain("frogPreviewPull");
+    expect(sceneSource).toContain("frogCoinCheck");
+    expect(sceneSource).toContain("this.spawnCoin(-1.12, -0.45, 1)");
+    expect(sceneSource).toContain("if (this.frogCoinCheck) this.nextSpawnAt = Number.POSITIVE_INFINITY");
+    expect(sceneSource).toContain("&& !this.frogCoinCheck");
+    expect(componentSource).toContain('params.has("frog-coin-check")');
+    expect(componentSource).toContain('"--frog-mouth-x"');
+    expect(componentSource).toContain('"--tongue-origin-x"');
+    expect(styleSource).toContain(".placed-item-frog.is-aiming .placed-item-art");
+  });
 });

@@ -36,7 +36,7 @@ const ITEM_PLACE_SFX = "/manus-storage/naika-item-place_c23e24d7.mp3";
 
 export type ItemId = "incense" | "cat" | "frog" | "daruma";
 type MosquitoType = "small" | "fast" | "sturdy";
-type MosquitoState = "approaching" | "feeding" | "falling";
+type MosquitoState = "approaching" | "feeding" | "captured" | "falling";
 
 export type HudState = {
   health: number;
@@ -53,7 +53,7 @@ export type ResultState = { score: number; best: number; kills: number; duration
 export type MosquitoView = { id: number; type: MosquitoType; x: number; y: number; bank: number; scale: number };
 export type KobanView = { id: number; x: number; y: number };
 export type PlacedItemView = { id: ItemId; x: number; y: number; range: number; duration: number | null; remaining: number | null; tone: string };
-export type FrogTongueView = { itemX: number; itemY: number; targetX: number; targetY: number; nonce: number };
+export type FrogTongueView = { itemX: number; itemY: number; targetX: number; targetY: number; nonce: number; phase: "aim" | "pull" };
 
 export type GameCallbacks = {
   onHud: (hud: HudState) => void;
@@ -86,6 +86,11 @@ type Mosquito = {
   speed: number;
   biteAt: number;
   fallingFor: number;
+  capturedFor: number;
+  captureOriginX: number;
+  captureOriginY: number;
+  captureTargetX: number;
+  captureTargetY: number;
   mesh: TransformNode;
 };
 
@@ -104,6 +109,7 @@ type PlacedItem = {
   bornAt: number;
   mesh: TransformNode;
   nextActionAt: number;
+  nextCollectAt: number;
 };
 
 type VfxKind = "tap" | "seal" | "smoke" | "damage";
@@ -174,9 +180,13 @@ class GameWorld {
   private readonly rewardPreview = new URLSearchParams(window.location.search).has("reward");
   private readonly itemPreview = new URLSearchParams(window.location.search).has("item");
   private readonly frogPreview = new URLSearchParams(window.location.search).has("frog");
+  private readonly frogPreviewSlow = new URLSearchParams(window.location.search).has("frog-slow");
+  private readonly frogPreviewPull = new URLSearchParams(window.location.search).has("frog-pull");
+  private readonly frogCoinCheck = new URLSearchParams(window.location.search).has("frog-coin-check");
   private rewardPreviewComplete = false;
   private itemPreviewComplete = false;
   private frogPreviewComplete = false;
+  private frogCoinCheckComplete = false;
   private frogTongueNonce = 0;
   private audioContext: AudioContext | null = null;
   private buzzOscillator: OscillatorNode | null = null;
@@ -217,6 +227,7 @@ class GameWorld {
       this.spawnCoin(-1.25, 1.55, 1);
       this.nextSpawnAt = Number.POSITIVE_INFINITY;
     }
+    if (this.frogCoinCheck) this.nextSpawnAt = Number.POSITIVE_INFINITY;
     this.telemetry.start(this.difficulty);
     this.callbacks.onPhase("playing");
     this.emitMosquitoViews(true);
@@ -262,6 +273,10 @@ class GameWorld {
     if (this.itemPreview && !this.itemPreviewComplete && this.now > 0.12) {
       this.itemPreviewComplete = true;
       this.placeItem(this.frogPreview ? "frog" : "incense", -1.55, -0.45);
+    }
+    if (this.frogCoinCheck && !this.frogCoinCheckComplete && this.now > 0.18) {
+      this.frogCoinCheckComplete = true;
+      this.spawnCoin(-1.12, -0.45, 1);
     }
     if (this.rewardPreview && !this.rewardPreviewComplete && this.now > 0.35) {
       const target = this.mosquitoes.find((entry) => entry.state !== "falling");
@@ -358,6 +373,7 @@ class GameWorld {
     this.rewardPreviewComplete = false;
     this.itemPreviewComplete = false;
     this.frogPreviewComplete = false;
+    this.frogCoinCheckComplete = false;
     this.callbacks.onMosquitoes([]);
     this.callbacks.onKobans([]);
     this.callbacks.onPlacedItems([]);
@@ -387,7 +403,7 @@ class GameWorld {
     // Visible appearance is rendered by the DOM overlay. Hide this legacy
     // Babylon sprite stack so it cannot read as a second insect or shadow.
     root.setEnabled(false);
-    this.mosquitoes.push({ id: this.mosquitoId++, type, hp: info.hp, state: "approaching", x, y, vx: 0, vy: 0, speed: info.speed, biteAt: 0, fallingFor: 0, mesh: root });
+    this.mosquitoes.push({ id: this.mosquitoId++, type, hp: info.hp, state: "approaching", x, y, vx: 0, vy: 0, speed: info.speed, biteAt: 0, fallingFor: 0, capturedFor: 0, captureOriginX: x, captureOriginY: y, captureTargetX: x, captureTargetY: y, mesh: root });
     this.emitMosquitoViews(true);
     this.telemetry.track("enemy_spawned", { type, stage, threat: Number(this.currentThreat.toFixed(2)), difficulty: this.difficulty });
   }
@@ -403,6 +419,19 @@ class GameWorld {
           mosquito.mesh.dispose();
           this.mosquitoes = this.mosquitoes.filter((entry) => entry !== mosquito);
         }
+        continue;
+      }
+      if (mosquito.state === "captured") {
+        mosquito.capturedFor += delta;
+        if (mosquito.capturedFor < 0) continue;
+        const progress = Math.min(1, mosquito.capturedFor / 0.36);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        mosquito.x = mosquito.captureOriginX + (mosquito.captureTargetX - mosquito.captureOriginX) * eased;
+        mosquito.y = mosquito.captureOriginY + (mosquito.captureTargetY - mosquito.captureOriginY) * eased;
+        mosquito.mesh.position.set(mosquito.x, mosquito.y, 0.58);
+        mosquito.mesh.rotation.z = Math.sin(this.now * 24 + mosquito.id) * 0.32;
+        mosquito.mesh.scaling.setAll(Math.max(0.45, 1 - progress * 0.42));
+        if (progress >= 1) this.killMosquito(mosquito, false);
         continue;
       }
       const cat = this.placed.find((item) => item.id === "cat" && this.now - item.bornAt < (ITEM_RUNTIME.cat.duration ?? 0));
@@ -457,23 +486,41 @@ class GameWorld {
         else if (age > 8 && outer) outer.visibility = 0.5;
       }
       if (item.id === "frog") {
-        if (age > (ITEM_RUNTIME.frog.duration ?? 0)) this.removeItem(item, "カエルは水辺へ帰った");
-        else if (this.now >= item.nextActionAt) {
+        if (age > (ITEM_RUNTIME.frog.duration ?? 0) && !this.frogCoinCheck) this.removeItem(item, "カエルは水辺へ帰った");
+        else {
+          if (this.now >= item.nextCollectAt) {
+            item.nextCollectAt = this.now + 0.22;
+            const coin = this.coinsOnFloor
+              .filter((entry) => distance(item.x, item.y, entry.x, entry.y) < ITEM_RUNTIME.frog.range)
+              .sort((a, b) => distance(a.x, a.y, item.x, item.y) - distance(b.x, b.y, item.x, item.y))[0];
+            if (coin) this.collectCoin(coin, "カエルが小判を飲み込んだ +1");
+          }
+          if (this.now < item.nextActionAt) continue;
           const target = this.mosquitoes
-            .filter((mosquito) => mosquito.state !== "falling" && distance(item.x, item.y, mosquito.x, mosquito.y) < ITEM_RUNTIME.frog.range)
+            .filter((mosquito) => (mosquito.state === "approaching" || mosquito.state === "feeding") && distance(item.x, item.y, mosquito.x, mosquito.y) < ITEM_RUNTIME.frog.range)
             .sort((a, b) => distance(a.x, a.y, item.x, item.y) - distance(b.x, b.y, item.x, item.y))[0];
           if (target) {
             item.nextActionAt = this.now + 1.7;
-            const tongue = { itemX: item.x, itemY: item.y, targetX: target.x, targetY: target.y, nonce: this.frogTongueNonce++ };
+            const tongue = { itemX: item.x, itemY: item.y, targetX: target.x, targetY: target.y, nonce: this.frogTongueNonce++, phase: "aim" as const };
+            const dx = target.x - item.x;
+            const dy = target.y - item.y;
+            const length = Math.max(0.001, Math.hypot(dx, dy));
+            target.state = "captured";
+            target.capturedFor = this.frogPreviewSlow || this.frogPreviewPull ? -60 : -0.12;
+            target.captureOriginX = target.x;
+            target.captureOriginY = target.y;
+            target.captureTargetX = item.x + (dx / length) * 0.25;
+            target.captureTargetY = item.y + (dy / length) * 0.25;
             this.callbacks.onFrogTongue(tongue);
-            window.setTimeout(() => this.callbacks.onFrogTongue(null), 420);
-            this.killMosquito(target, false);
+            const tongueDelay = this.frogPreviewPull ? 0 : this.frogPreviewSlow ? 10000 : 110;
+            window.setTimeout(() => this.callbacks.onFrogTongue({ ...tongue, phase: "pull" }), tongueDelay);
+            window.setTimeout(() => this.callbacks.onFrogTongue(null), this.frogPreviewPull ? 60000 : tongueDelay + 410);
             item.mesh.scaling.set(0.84, 1.26, 1);
-            item.mesh.rotation.z = target.x < item.x ? -0.16 : 0.16;
+            item.mesh.rotation.z = Math.atan2(dy, dx) * 0.1;
             window.setTimeout(() => {
               item.mesh.scaling.setAll(1);
               item.mesh.rotation.z = 0;
-            }, 360);
+            }, 440);
           }
         }
       }
@@ -646,7 +693,7 @@ class GameWorld {
       eyeR.position.x = 0.12;
       eyeR.parent = root;
     }
-    this.placed.push({ id, x: safeX, y: safeY, bornAt: this.now, mesh: root, nextActionAt: this.now + 0.5 });
+    this.placed.push({ id, x: safeX, y: safeY, bornAt: this.now, mesh: root, nextActionAt: this.now + 0.5, nextCollectAt: this.now + 0.12 });
     this.emitPlacedItemViews();
     this.placement = null;
     this.itemsPlaced += 1;
