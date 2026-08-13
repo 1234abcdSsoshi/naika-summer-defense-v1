@@ -31,6 +31,8 @@ const ENEMY_SPRITES: Record<MosquitoType, string> = {
 };
 const ITEM_ATLAS = "/manus-storage/naika-defense-items-atlas_4c991078.png";
 const VFX_ATLAS = "/manus-storage/naika-woodblock-vfx-atlas_9cc67c3a.png";
+const KOBAN_COLLECT_SFX = "/manus-storage/naika-koban-collect_c76439e0.mp3";
+const ITEM_PLACE_SFX = "/manus-storage/naika-item-place_c23e24d7.mp3";
 
 export type ItemId = "incense" | "cat" | "frog" | "daruma";
 type MosquitoType = "small" | "fast" | "sturdy";
@@ -48,7 +50,7 @@ export type HudState = {
 };
 
 export type ResultState = { score: number; best: number; kills: number; duration: number; analytics?: RunAnalytics };
-export type MosquitoView = { id: number; type: MosquitoType; x: number; y: number };
+export type MosquitoView = { id: number; type: MosquitoType; x: number; y: number; bank: number; scale: number };
 export type KobanView = { id: number; x: number; y: number };
 export type PlacedItemView = { id: ItemId; x: number; y: number; range: number; duration: number | null; remaining: number | null; tone: string };
 export type FrogTongueView = { itemX: number; itemY: number; targetX: number; targetY: number; nonce: number };
@@ -179,6 +181,8 @@ class GameWorld {
   private buzzOscillator: OscillatorNode | null = null;
   private buzzGain: GainNode | null = null;
   private buzzFilter: BiquadFilterNode | null = null;
+  private readonly kobanCollectSfx = new Audio(KOBAN_COLLECT_SFX);
+  private readonly itemPlaceSfx = new Audio(ITEM_PLACE_SFX);
 
   constructor(private readonly scene: Scene, callbacks: GameCallbacks) {
     this.callbacks = callbacks;
@@ -396,6 +400,8 @@ class GameWorld {
       if (mosquito.state === "feeding") {
         mosquito.mesh.position.y = this.playerY + 0.15 + Math.sin(this.now * 8 + mosquito.id) * 0.06;
         mosquito.mesh.position.x = Math.sin(this.now * 5 + mosquito.id) * 0.32;
+        mosquito.mesh.rotation.z = Math.sin(this.now * 11 + mosquito.id) * 0.13;
+        mosquito.mesh.scaling.set(1 + Math.sin(this.now * 16 + mosquito.id) * 0.055, 1 + Math.cos(this.now * 16 + mosquito.id) * 0.055, 1);
         if (this.now >= mosquito.biteAt) {
           mosquito.biteAt = this.now + (mosquito.type === "fast" ? 1.65 : 2.05);
           this.bitePlayer(mosquito.type === "sturdy" ? 9 : mosquito.type === "fast" ? 7 : 6);
@@ -405,10 +411,16 @@ class GameWorld {
         const dy = targetY - mosquito.y;
         const len = Math.max(0.001, Math.hypot(dx, dy));
         const wiggle = Math.sin(this.now * 12 + mosquito.id * 3) * 0.18;
-        mosquito.x += (dx / len * mosquito.speed + wiggle) * delta;
-        mosquito.y += (dy / len * mosquito.speed) * delta;
+        const desiredVx = dx / len * mosquito.speed + wiggle;
+        const desiredVy = dy / len * mosquito.speed;
+        const steering = Math.min(1, delta * 9.5);
+        mosquito.vx += (desiredVx - mosquito.vx) * steering;
+        mosquito.vy += (desiredVy - mosquito.vy) * steering;
+        mosquito.x += mosquito.vx * delta;
+        mosquito.y += mosquito.vy * delta;
         mosquito.mesh.position.set(mosquito.x, mosquito.y, 0.45);
-        mosquito.mesh.rotation.z = Math.sin(this.now * 14 + mosquito.id) * 0.2;
+        mosquito.mesh.rotation.z = Math.max(-0.34, Math.min(0.34, -mosquito.vx * 0.2)) + Math.sin(this.now * 16 + mosquito.id) * 0.06;
+        mosquito.mesh.scaling.set(1 + Math.sin(this.now * 18 + mosquito.id) * 0.045, 1 + Math.cos(this.now * 18 + mosquito.id) * 0.065, 1);
       }
     }
   }
@@ -438,10 +450,14 @@ class GameWorld {
             item.nextActionAt = this.now + 1.7;
             const tongue = { itemX: item.x, itemY: item.y, targetX: target.x, targetY: target.y, nonce: this.frogTongueNonce++ };
             this.callbacks.onFrogTongue(tongue);
-            window.setTimeout(() => this.callbacks.onFrogTongue(null), 210);
+            window.setTimeout(() => this.callbacks.onFrogTongue(null), 420);
             this.killMosquito(target, false);
-            item.mesh.scaling.y = 1.2;
-            window.setTimeout(() => item.mesh.scaling.y = 1, 120);
+            item.mesh.scaling.set(0.84, 1.26, 1);
+            item.mesh.rotation.z = target.x < item.x ? -0.16 : 0.16;
+            window.setTimeout(() => {
+              item.mesh.scaling.setAll(1);
+              item.mesh.rotation.z = 0;
+            }, 360);
           }
         }
       }
@@ -462,7 +478,7 @@ class GameWorld {
     this.nextMosquitoSyncAt = this.now + 0.05;
     this.callbacks.onMosquitoes(this.mosquitoes
       .filter((entry) => entry.state !== "falling")
-      .map(({ id, type, x, y }) => ({ id, type, x, y })));
+      .map(({ id, type, x, y, vx }) => ({ id, type, x, y, bank: Math.max(-18, Math.min(18, -vx * 18)), scale: type === "sturdy" ? 1.16 : type === "fast" ? 0.9 : 1 })));
   }
 
   private emitKobanViews(force = false) {
@@ -568,7 +584,7 @@ class GameWorld {
     coin.mesh.dispose();
     this.coinsOnFloor = this.coinsOnFloor.filter((entry) => entry !== coin);
     this.emitKobanViews(true);
-    this.playTone(820, 0.055, "triangle", 0.045);
+    this.playInteractionSfx(this.kobanCollectSfx, 0.48);
     this.telemetry.track("coin_collected", { coins: this.coins, source: notice.includes("ダルマ") ? "daruma" : "tap" });
     this.emitHud(notice);
   }
@@ -614,7 +630,7 @@ class GameWorld {
     this.emitPlacedItemViews();
     this.placement = null;
     this.itemsPlaced += 1;
-    this.playTone(460, 0.09, "triangle", 0.06);
+    this.playInteractionSfx(this.itemPlaceSfx, 0.42);
     this.telemetry.track("item_placed", { item: id, x: Number(safeX.toFixed(1)), y: Number(safeY.toFixed(1)) });
     this.emitHud(`${ITEM_INFO[id].label}を置いた`);
   }
@@ -792,6 +808,15 @@ class GameWorld {
       oscillator.start();
       oscillator.stop(context.currentTime + duration);
     } catch { /* Audio is enhancement only. */ }
+  }
+
+  private playInteractionSfx(source: HTMLAudioElement, volume: number) {
+    try {
+      const effect = source.cloneNode(true) as HTMLAudioElement;
+      effect.volume = volume;
+      effect.preload = "auto";
+      void effect.play().catch(() => undefined);
+    } catch { /* Sound effects are enhancements only. */ }
   }
 
   private getAudioContext() {
