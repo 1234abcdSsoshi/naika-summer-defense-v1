@@ -94,7 +94,7 @@ export default function GameCanvas() {
   const start = () => {
     const bgm = bgmRef.current;
     if (bgm) {
-      bgm.volume = 0.22;
+      bgm.volume = 0.10;
       bgm.play().catch(() => undefined);
     }
     handleRef.current?.setDifficulty(difficulty);
