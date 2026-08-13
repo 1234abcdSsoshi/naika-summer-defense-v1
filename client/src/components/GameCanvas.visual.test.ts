@@ -116,13 +116,14 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).toContain('data-babylon-underlay={item.underlayDisabled ? "disabled" : "enabled"}');
   });
 
-  it("招き猫の手振りは独立した肉球オーバーレイを使わず、本体スプライトを切り替える", () => {
+  it("招き猫は従来の防衛アイテムアトラス表示を使い、生成スプライトを参照しない", () => {
     expect(componentSource).not.toContain('className="cat-waving-paw"');
-    expect(componentSource).toContain('data-item-motion={item.id === "cat" ? "sprite-waving" : "static"}');
+    expect(componentSource).not.toContain('data-item-motion={item.id === "cat" ? "sprite-waving" : "static"}');
     expect(styleSource).not.toContain("@keyframes cat-waving-paw");
     expect(styleSource).not.toContain("@keyframes cat-body-bob");
-    expect(componentSource).toContain("CAT_WAVING_SPRITESHEET");
-    expect(styleSource).toContain("@keyframes cat-sprite-wave");
-    expect(styleSource).toContain("animation: cat-sprite-wave 1.36s steps(1, end) infinite");
+    expect(componentSource).not.toContain("CAT_WAVING_SPRITESHEET");
+    expect(componentSource).not.toContain("naika-maneki-cat-waving-spritesheet");
+    expect(styleSource).not.toContain("@keyframes cat-sprite-wave");
+    expect(styleSource).toContain(".placed-item-cat .placed-item-art { border-radius: 14px; background-position: 100% 0 !important; }");
   });
 });
