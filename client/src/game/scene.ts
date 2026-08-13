@@ -49,10 +49,12 @@ export type HudState = {
 
 export type ResultState = { score: number; best: number; kills: number; duration: number; analytics?: RunAnalytics };
 export type MosquitoView = { id: number; type: MosquitoType; x: number; y: number };
+export type KobanView = { id: number; x: number; y: number };
 
 export type GameCallbacks = {
   onHud: (hud: HudState) => void;
   onMosquitoes: (mosquitoes: MosquitoView[]) => void;
+  onKobans: (kobans: KobanView[]) => void;
   onPhase: (phase: "title" | "playing" | "result") => void;
   onResult: (result: ResultState) => void;
 };
@@ -147,6 +149,7 @@ class GameWorld {
   private threatSum = 0;
   private threatSamples = 0;
   private nextMosquitoSyncAt = 0;
+  private nextKobanSyncAt = 0;
   private readonly telemetry = new GameplayTelemetry();
   private readonly playerRoot: TransformNode;
   private readonly playerHead: AbstractMesh;
@@ -154,6 +157,8 @@ class GameWorld {
   private readonly callbacks: GameCallbacks;
   private readonly demo = new URLSearchParams(window.location.search).has("demo");
   private readonly inspect = new URLSearchParams(window.location.search).has("inspect");
+  private readonly rewardPreview = new URLSearchParams(window.location.search).has("reward");
+  private rewardPreviewComplete = false;
   private audioContext: AudioContext | null = null;
   private buzzOscillator: OscillatorNode | null = null;
   private buzzGain: GainNode | null = null;
@@ -208,7 +213,15 @@ class GameWorld {
     this.emitMosquitoViews();
     this.updateMosquitoBuzz();
     this.updateCoins(safeDelta);
+    this.emitKobanViews();
     this.updateVfx();
+    if (this.rewardPreview && !this.rewardPreviewComplete && this.now > 0.35) {
+      const target = this.mosquitoes.find((entry) => entry.state !== "falling");
+      if (target) {
+        this.rewardPreviewComplete = true;
+        this.hitMosquito(target);
+      }
+    }
     if (this.demo && !this.inspect && this.now >= this.nextAutoAt) this.runDemo();
     this.emitHud();
   }
@@ -292,7 +305,10 @@ class GameWorld {
     this.threatSum = 0;
     this.threatSamples = 0;
     this.nextMosquitoSyncAt = 0;
+    this.nextKobanSyncAt = 0;
+    this.rewardPreviewComplete = false;
     this.callbacks.onMosquitoes([]);
+    this.callbacks.onKobans([]);
     this.playerRoot.scaling.setAll(1);
   }
 
@@ -330,7 +346,6 @@ class GameWorld {
         if (mosquito.fallingFor > 0.28) {
           mosquito.mesh.dispose();
           this.mosquitoes = this.mosquitoes.filter((entry) => entry !== mosquito);
-          this.spawnCoin(mosquito.x, mosquito.y, MOSQUITO_INFO[mosquito.type].coin);
         }
         continue;
       }
@@ -408,6 +423,12 @@ class GameWorld {
       .map(({ id, type, x, y }) => ({ id, type, x, y })));
   }
 
+  private emitKobanViews(force = false) {
+    if (!force && this.now < this.nextKobanSyncAt) return;
+    this.nextKobanSyncAt = this.now + 0.05;
+    this.callbacks.onKobans(this.coinsOnFloor.map(({ id, x, y }) => ({ id, x, y })));
+  }
+
   private updateCoins(_delta: number) {
     for (const coin of [...this.coinsOnFloor]) {
       const age = this.now - coin.bornAt;
@@ -418,6 +439,7 @@ class GameWorld {
       if (age > 5) {
         coin.mesh.dispose();
         this.coinsOnFloor = this.coinsOnFloor.filter((entry) => entry !== coin);
+        this.emitKobanViews(true);
       }
     }
   }
@@ -465,6 +487,7 @@ class GameWorld {
     this.combo = this.now - this.lastKillAt <= 3 ? Math.min(20, this.combo + 1) : 1;
     this.lastKillAt = this.now;
     const info = MOSQUITO_INFO[mosquito.type];
+    this.spawnCoin(mosquito.x, mosquito.y, info.coin);
     this.score += Math.round(info.score * DIFFICULTY_PROFILES[this.difficulty].rewardMultiplier * (1 + this.combo * 0.05));
     this.telemetry.track("enemy_defeated", { type: mosquito.type, source: handTap ? "tap" : "item", combo: this.combo, score: this.score });
     this.emitHud(handTap ? `命中！ ${this.combo}連続` : `道具が蚊を退けた`);
@@ -493,6 +516,7 @@ class GameWorld {
       root.position = new Vector3(x + (index ? 0.24 : -0.08), y - 0.18, 0.52);
       this.coinsOnFloor.push({ id: this.coinId++, x: root.position.x, y: root.position.y, bornAt: this.now, mesh: root });
     }
+    this.emitKobanViews(true);
   }
 
   private collectCoin(coin: Coin, notice: string) {
@@ -501,6 +525,7 @@ class GameWorld {
     this.coinsCollected += 1;
     coin.mesh.dispose();
     this.coinsOnFloor = this.coinsOnFloor.filter((entry) => entry !== coin);
+    this.emitKobanViews(true);
     this.playTone(820, 0.055, "triangle", 0.045);
     this.telemetry.track("coin_collected", { coins: this.coins, source: notice.includes("ダルマ") ? "daruma" : "tap" });
     this.emitHud(notice);
