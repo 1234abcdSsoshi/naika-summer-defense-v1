@@ -227,8 +227,8 @@ button { font: inherit; }
 .breath-meter { display: grid; grid-template-columns: auto minmax(92px, 26vw) auto; align-items: center; gap: 7px; color: #f2ebdd; font-size: 11px; font-weight: 700; text-shadow: 0 1px 7px rgba(0,0,0,.65); }
 .breath-meter > div { overflow: hidden; height: 8px; border: 1px solid rgba(242,235,221,.7); border-radius: 20px; background: rgba(16,35,63,.55); }
 .breath-meter i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #95ad62, #f6a33a); box-shadow: 0 0 10px rgba(246,163,58,.5); transition: width .18s ease-out; }
-.coin-readout { display: flex; align-items: center; gap: 4px; color: #f6a33a; font-weight: 800; font-variant-numeric: tabular-nums; text-shadow: 0 1px 7px rgba(0,0,0,.65); }
-.coin-readout span { font-size: 21px; line-height: 1; }
+.coin-readout { display: flex; align-items: center; gap: 5px; color: #f6a33a; font-weight: 800; font-variant-numeric: tabular-nums; text-shadow: 0 1px 7px rgba(0,0,0,.65); }
+.hud-koban { display: inline-block; width: 23px; height: 18px; flex: 0 0 auto; background: var(--koban-asset) center / contain no-repeat; filter: drop-shadow(0 2px 2px rgba(0,0,0,.55)); }
 .combo-badge, .notice, .placement-callout { justify-self: center; border: 1px solid rgba(242,235,221,.27); background: rgba(16,35,63,.74); box-shadow: 0 12px 30px rgba(0,0,0,.26); backdrop-filter: blur(8px); }
 .combo-badge { color: #f6a33a; padding: 4px 12px; border-radius: 999px; font-family: "Zen Old Mincho", serif; font-size: 15px; }
 .notice { padding: 7px 12px; border-radius: 10px; color: #f2ebdd; font-size: 12px; text-align: center; }

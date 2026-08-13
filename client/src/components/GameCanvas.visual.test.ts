@@ -87,4 +87,11 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).toContain("key={item.key}");
     expect(styleSource).toContain("@keyframes daruma-travel-bob");
   });
+
+  it("右上コインゲージは丸い記号ではなく小判アイコンを表示する", () => {
+    expect(componentSource).toContain('className="hud-koban"');
+    expect(componentSource).toContain('aria-label="小判"');
+    expect(componentSource).not.toContain('<div className="coin-readout"><span>◒</span>');
+    expect(styleSource).toContain(".hud-koban { display: inline-block; width: 23px; height: 18px");
+  });
 });
