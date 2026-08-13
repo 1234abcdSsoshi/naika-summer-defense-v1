@@ -1,0 +1,154 @@
+/**
+ * Design reminder — 「藍の縁側、行灯の防衛線」:
+ * DOM HUDは月白の可読性、行灯橙の行動喚起、和紙の薄い質感を使う。
+ * Babylon engine lifecycle is guarded for React 19 StrictMode.
+ */
+import { useEffect, useRef, useState } from "react";
+import { Engine } from "@babylonjs/core/Engines/engine";
+import { createGameScene, type GameHandle, type HudState, type ItemId, type ResultState } from "@/game/scene";
+
+const BRAND_MARK = "/manus-storage/naika-mark_1621aaa0.png";
+const BACKGROUND = "/manus-storage/naika-room-background_d0c50701.png";
+const NIGHT_BGM = "/manus-storage/naika-night-defense-loop_0b454f3f.mp3";
+
+const initialHud: HudState = {
+  health: 100,
+  score: 0,
+  coins: 4,
+  combo: 0,
+  elapsed: 0,
+  placement: null,
+  notice: "",
+  items: {
+    incense: { price: 6, active: false },
+    cat: { price: 8, active: false },
+    frog: { price: 14, active: false },
+    daruma: { price: 10, active: false },
+  },
+};
+
+const itemCopy: Record<ItemId, { symbol: string; name: string; short: string }> = {
+  incense: { symbol: "◉", name: "蚊取り線香", short: "煙で退ける" },
+  cat: { symbol: "招", name: "招き猫", short: "蚊を招く" },
+  frog: { symbol: "蛙", name: "カエル", short: "舌で食べる" },
+  daruma: { symbol: "達", name: "ダルマ", short: "コイン回収" },
+};
+
+export default function GameCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const handleRef = useRef<GameHandle | null>(null);
+  const bgmRef = useRef<HTMLAudioElement>(null);
+  const startedRef = useRef(false);
+  const [phase, setPhase] = useState<"title" | "playing" | "result">("title");
+  const [hud, setHud] = useState<HudState>(initialHud);
+  const [result, setResult] = useState<ResultState>({ score: 0, best: Number(localStorage.getItem("naika-high-score") ?? "0"), kills: 0, duration: 0 });
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || startedRef.current) return;
+    startedRef.current = true;
+    const engine = new Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true, adaptToDeviceRatio: true });
+    let disposed = false;
+    createGameScene(engine, canvas, {
+      onHud: setHud,
+      onPhase: setPhase,
+      onResult: setResult,
+    }).then((handle) => {
+      if (disposed) {
+        handle.dispose();
+        return;
+      }
+      handleRef.current = handle;
+      engine.runRenderLoop(() => handle.scene.render());
+    });
+    const resize = () => engine.resize();
+    window.addEventListener("resize", resize);
+    return () => {
+      disposed = true;
+      window.removeEventListener("resize", resize);
+      handleRef.current?.dispose();
+      handleRef.current = null;
+      engine.dispose();
+      startedRef.current = false;
+    };
+  }, []);
+
+  const start = () => {
+    const bgm = bgmRef.current;
+    if (bgm) {
+      bgm.volume = 0.22;
+      bgm.play().catch(() => undefined);
+    }
+    handleRef.current?.startRun();
+  };
+  const buy = (item: ItemId) => handleRef.current?.purchase(item);
+  const returnToTitle = () => {
+    const bgm = bgmRef.current;
+    if (bgm) {
+      bgm.pause();
+      bgm.currentTime = 0;
+    }
+    setPhase("title");
+  };
+
+  return (
+    <main className="night-shell" style={{ backgroundImage: `linear-gradient(rgba(10, 24, 45, .35), rgba(10, 24, 45, .72)), url(${BACKGROUND})` }}>
+      <audio ref={bgmRef} src={NIGHT_BGM} loop preload="auto" />
+      <canvas ref={canvasRef} className="game-canvas" aria-label="内蚊のゲーム画面" style={{ touchAction: "none" }} />
+      <div className="paper-grain" aria-hidden="true" />
+      {phase === "title" && <div className="title-world-signals" aria-hidden="true"><span className="moon-disc" /><span className="lantern-ring ring-one" /><span className="lantern-ring ring-two" /><span className="mosquito-shape mosquito-one" /><span className="mosquito-shape mosquito-two" /><div className="sleeping-band"><i /><i /><i /></div></div>}
+
+      {phase !== "title" && (
+        <div className="hud" aria-live="polite">
+          <div className="hud-top">
+            <div className="brand-mini"><img src={BRAND_MARK} alt="" /><span>内蚊</span></div>
+            <div className="score-cluster"><span>夜更けの得点</span><strong>{hud.score.toLocaleString()}</strong></div>
+          </div>
+          <div className="hud-readout">
+            <div className="breath-meter"><span>寝息</span><div><i style={{ width: `${hud.health}%` }} /></div><b>{hud.health}</b></div>
+            <div className="coin-readout"><span>◒</span><b>{hud.coins}</b></div>
+          </div>
+          {hud.combo > 1 && <div className="combo-badge">{hud.combo} 連続</div>}
+          {hud.notice && <div className="notice">{hud.notice}</div>}
+          {hud.placement && <div className="placement-callout"><span>選択中</span><strong>{itemCopy[hud.placement].name}</strong><small>畳をタップして置く</small></div>}
+        </div>
+      )}
+
+      {phase === "playing" && (
+        <nav className="item-tray" aria-label="防衛道具">
+          {(Object.keys(itemCopy) as ItemId[]).map((item) => {
+            const data = hud.items[item];
+            const ready = hud.coins >= data.price && !data.active;
+            return <button key={item} className={`item-button ${ready ? "is-ready" : ""} ${data.active ? "is-active" : ""}`} onClick={() => buy(item)} disabled={data.active}>
+              <span className="item-symbol">{itemCopy[item].symbol}</span>
+              <span className="item-name">{itemCopy[item].name}</span>
+              <span className="item-meta">{data.active ? (data.cooldown ? `${data.cooldown}s` : "稼働中") : `◒ ${data.price}`}</span>
+            </button>;
+          })}
+        </nav>
+      )}
+
+      {phase === "title" && (
+        <section className="title-card" aria-labelledby="game-title">
+          <img className="brand-mark" src={BRAND_MARK} alt="内蚊のシンボルマーク" />
+          <p className="eyebrow">夏夜の防衛アクション</p>
+          <h1 id="game-title"><em>内</em>蚊 <span>ないか</span></h1>
+          <p className="title-copy">今夜、守るのは<br />ひとりぶんの寝息。</p>
+          <button className="start-button" onClick={start}>夜を守る <span>→</span></button>
+          <p className="title-note">蚊をタップし、落ちたコインで道具を置こう。</p>
+        </section>
+      )}
+
+      {phase === "result" && (
+        <section className="result-card" aria-live="assertive">
+          <p className="eyebrow">夜明け前の記録</p>
+          <h2>寝息が、止まった。</h2>
+          <div className="result-score"><span>得点</span><strong>{result.score.toLocaleString()}</strong></div>
+          <dl><div><dt>最高点</dt><dd>{result.best.toLocaleString()}</dd></div><div><dt>退けた蚊</dt><dd>{result.kills}</dd></div><div><dt>守れた時間</dt><dd>{result.duration}秒</dd></div></dl>
+          <button className="start-button" onClick={start}>もう一度、守る <span>↻</span></button>
+          <button className="quiet-button" onClick={returnToTitle}>縁側へ戻る</button>
+        </section>
+      )}
+    </main>
+  );
+}
