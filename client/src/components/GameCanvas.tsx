@@ -12,6 +12,9 @@ import { getLocalEventSummary } from "@/game/telemetry";
 const BRAND_MARK = "/manus-storage/naika-mark_1621aaa0.png";
 const BACKGROUND = "/manus-storage/naika-room-background_d0c50701.png";
 const NIGHT_BGM = "/manus-storage/naika-night-defense-loop_0b454f3f.mp3";
+const DEFENSE_ATLAS = "/manus-storage/naika-3d-defense-atlas_d5b41c2f.png";
+const KOBAN_ASSET = "/manus-storage/naika-3d-koban_5621d1b0.png";
+const INSECT_ATLAS = "/manus-storage/naika-3d-insect-atlas_425b7f3c.png";
 
 const initialHud: HudState = {
   health: 100,
@@ -116,11 +119,11 @@ export default function GameCanvas() {
       <audio ref={bgmRef} src={NIGHT_BGM} loop preload="auto" />
       <canvas ref={canvasRef} className="game-canvas" aria-label="内蚊のゲーム画面" style={{ touchAction: "none" }} />
       <div className="paper-grain" aria-hidden="true" />
-      {phase === "playing" && <div className="enemy-dom-layer" aria-live="polite" aria-label={`接近中の蚊 ${mosquitoes.length}匹`}>{mosquitoes.map((mosquito) => <div key={mosquito.id} className={`enemy-dom enemy-dom-${mosquito.type}`} style={{ left: `${((mosquito.x + 4) / 8) * 100}%`, top: `${((7 - mosquito.y) / 14) * 100}%` }}><span className="enemy-wing enemy-wing-left" /><span className="enemy-wing enemy-wing-right" /><span className="enemy-body" /><span className="enemy-legs" /></div>)}</div>}
-      {phase === "playing" && <div className="koban-dom-layer" aria-live="polite" aria-label={`回収できる小判 ${kobans.length}枚`}>{kobans.map((koban) => <div key={koban.id} className="koban-dom" style={{ left: `${((koban.x + 4) / 8) * 100}%`, top: `${((7 - koban.y) / 14) * 100}%` }}><span>小判</span><i /></div>)}</div>}
+      {phase === "playing" && <div className="enemy-dom-layer" aria-live="polite" aria-label={`接近中の蚊 ${mosquitoes.length}匹`}>{mosquitoes.map((mosquito) => <div key={mosquito.id} className={`enemy-dom enemy-dom-${mosquito.type}`} style={{ left: `${((mosquito.x + 4) / 8) * 100}%`, top: `${((7 - mosquito.y) / 14) * 100}%`, "--insect-atlas": `url(${INSECT_ATLAS})` } as CSSProperties}><span className="enemy-wing enemy-wing-left" /><span className="enemy-wing enemy-wing-right" /><span className="enemy-body" /><span className="enemy-legs" /></div>)}</div>}
+      {phase === "playing" && <div className="koban-dom-layer" aria-live="polite" aria-label={`回収できる小判 ${kobans.length}枚`}>{kobans.map((koban) => <div key={koban.id} className="koban-dom" style={{ left: `${((koban.x + 4) / 8) * 100}%`, top: `${((7 - koban.y) / 14) * 100}%`, "--koban-asset": `url(${KOBAN_ASSET})` } as CSSProperties}><span>小判</span><i /></div>)}</div>}
       {phase === "playing" && <div className="placed-item-dom-layer" aria-live="polite" aria-label={`設置中の防衛道具 ${placedItems.length}個`}>{placedItems.map((item) => {
         const progress = item.duration === null ? 1 : Math.max(0, Math.min(1, (item.remaining ?? 0) / item.duration));
-        const effectStyle = { left: `${((item.x + 4) / 8) * 100}%`, top: `${((7 - item.y) / 14) * 100}%`, "--range-size": `${Math.round(item.range * 68)}px`, "--range-color": item.tone, "--ring-progress": `${Math.round(progress * 360)}deg` } as CSSProperties;
+        const effectStyle = { left: `${((item.x + 4) / 8) * 100}%`, top: `${((7 - item.y) / 14) * 100}%`, "--range-size": `${Math.round(item.range * 68)}px`, "--range-color": item.tone, "--ring-progress": `${Math.round(progress * 360)}deg`, "--defense-atlas": `url(${DEFENSE_ATLAS})` } as CSSProperties;
         const tongueActive = item.id === "frog" && frogTongue && Math.abs(frogTongue.itemX - item.x) < 0.01 && Math.abs(frogTongue.itemY - item.y) < 0.01;
         const tongueStyle = tongueActive ? { "--tongue-length": `${Math.max(30, Math.min(140, Math.hypot(frogTongue.targetX - item.x, frogTongue.targetY - item.y) * 65))}px`, "--tongue-angle": `${Math.atan2(-(frogTongue.targetY - item.y), frogTongue.targetX - item.x) * (180 / Math.PI)}deg` } as CSSProperties : undefined;
         return <div key={`${item.id}-${item.x}-${item.y}`} className={`placed-item-dom placed-item-${item.id}`} style={effectStyle}><span className="placed-item-range" aria-hidden="true" /><span className="placed-item-art" aria-hidden="true" />{tongueActive && <span key={frogTongue.nonce} className="frog-tongue" style={tongueStyle} aria-hidden="true" />}<span className="item-runtime-ring"><i>{item.duration === null ? "∞" : Math.ceil(item.remaining ?? 0)}</i></span></div>;
@@ -151,10 +154,10 @@ export default function GameCanvas() {
             const data = hud.items[item];
             const ready = hud.coins >= data.price && !data.active;
             return <button key={item} className={`item-button ${ready ? "is-ready" : ""} ${data.active ? "is-active" : ""}`} onClick={() => buy(item)} disabled={data.active}>
-              <span className={`item-thumb item-thumb-${item}`} aria-hidden="true" />
+              <span className={`item-thumb item-thumb-${item}`} aria-hidden="true" style={{ "--defense-atlas": `url(${DEFENSE_ATLAS})` } as CSSProperties} />
               <span className="item-symbol">{itemCopy[item].symbol}</span>
               <span className="item-name">{itemCopy[item].name}</span>
-              <span className="item-meta">{data.active ? (data.cooldown ? `${data.cooldown}s` : "稼働中") : `◒ ${data.price}`}</span>
+              <span className="item-meta">{data.active ? (data.cooldown ? `${data.cooldown}s` : "稼働中") : <><i className="koban-mini" style={{ "--koban-asset": `url(${KOBAN_ASSET})` } as CSSProperties} aria-hidden="true" />{data.price}</>}</span>
             </button>;
           })}
         </nav>

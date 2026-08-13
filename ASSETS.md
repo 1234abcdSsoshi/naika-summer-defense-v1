@@ -13,5 +13,8 @@
 | Sturdy mosquito sprite | 強敵 | 太い墨黒の胴、広い藍の羽、朱印の印 | `/manus-storage/naika-mosquito-sturdy-sprite_87f8df86.png` | 強敵の描画 |
 | Defense item atlas | 道具の2x2スプライト | 線香、招き猫、蛙、達磨を木版画調で統一 | `/manus-storage/naika-defense-items-atlas_4c991078.png` | 道具トレイ・設置物の描画 |
 | Woodblock VFX atlas | 命中・撃破・落下・被弾の2x2VFX | 墨線、橙朱の印影、煙、ダメージ印 | `/manus-storage/naika-woodblock-vfx-atlas_9cc67c3a.png` | 画面内の短時間VFX |
+| 3D defense atlas | 防衛アイテムの2x2スプライト | 線香、招き猫、カエル、ダルマを釉薬・漆・湿潤素材で描いた3Dデジタル調 | `/manus-storage/naika-3d-defense-atlas_d5b41c2f.png` | アイテムトレイ・設置アイテム |
+| 3D koban | 通貨スプライト | 打ち出し金属と行灯橙の反射を持つ小判 | `/manus-storage/naika-3d-koban_5621d1b0.png` | ドロップ小判・価格マーク |
+| 3D insect atlas | 敵スプライト | 月光の半透明羽と光沢ある胴を持つ3種の3D飛翔昆虫 | `/manus-storage/naika-3d-insect-atlas_425b7f3c.png` | 通常敵・高速敵・強敵 |
 
 生成物は必ず使用前に、透過、輪郭、反復可能性、背景とのコントラストを確認する。現行プロトタイプでは、背景とロゴを直接利用し、人物・敵・道具は同一の色・シルエット指針に従ってBabylonの軽量図形として実装している。生成BGMはブラウザの自動再生制約を守るため、ユーザーの開始操作後にだけ再生する。
