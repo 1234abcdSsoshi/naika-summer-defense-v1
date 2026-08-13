@@ -150,6 +150,11 @@ class GameWorld {
   private readonly playerBody: AbstractMesh;
   private readonly callbacks: GameCallbacks;
   private readonly demo = new URLSearchParams(window.location.search).has("demo");
+  private readonly inspect = new URLSearchParams(window.location.search).has("inspect");
+  private audioContext: AudioContext | null = null;
+  private buzzOscillator: OscillatorNode | null = null;
+  private buzzGain: GainNode | null = null;
+  private buzzFilter: BiquadFilterNode | null = null;
 
   constructor(private readonly scene: Scene, callbacks: GameCallbacks) {
     this.callbacks = callbacks;
@@ -170,6 +175,7 @@ class GameWorld {
 
   startRun = () => {
     this.resetRun();
+    this.unlockAudio();
     this.running = true;
     this.telemetry.start(this.difficulty);
     this.callbacks.onPhase("playing");
@@ -195,9 +201,10 @@ class GameWorld {
     this.updateItems();
     if (this.now >= this.nextSpawnAt) this.spawnMosquito();
     this.updateMosquitoes(safeDelta);
+    this.updateMosquitoBuzz();
     this.updateCoins(safeDelta);
     this.updateVfx();
-    if (this.demo && this.now >= this.nextAutoAt) this.runDemo();
+    if (this.demo && !this.inspect && this.now >= this.nextAutoAt) this.runDemo();
     this.emitHud();
   }
 
@@ -248,6 +255,9 @@ class GameWorld {
     this.coinsOnFloor.forEach((entry) => entry.mesh.dispose());
     this.placed.forEach((entry) => entry.mesh.dispose());
     this.vfxs.forEach((entry) => entry.mesh.dispose());
+    this.stopMosquitoBuzz();
+    this.audioContext?.close().catch(() => undefined);
+    this.audioContext = null;
     this.playerRoot.dispose(false, true);
   };
 
@@ -266,7 +276,7 @@ class GameWorld {
     this.coins = 4;
     this.combo = 0;
     this.kills = 0;
-    this.nextSpawnAt = this.demo ? 0.08 : 0.9;
+    this.nextSpawnAt = this.demo ? 0 : 0.9;
     this.nextAutoAt = 0.45;
     this.placement = null;
     this.taps = 0;
@@ -291,11 +301,13 @@ class GameWorld {
     if (this.mosquitoes.filter((entry) => entry.state !== "falling").length >= activeCap) return;
     const info = MOSQUITO_INFO[type];
     const x = -3.35 + this.random() * 6.7;
-    const y = 5.8 + this.random() * 0.45;
+    const y = 4.25 + this.random() * 0.6;
     const root = new TransformNode(`mosquito-${this.mosquitoId}`, this.scene);
-    root.position = new Vector3(x, y, 0.45);
+    root.position = new Vector3(x, y, 0.62);
+    this.makeMosquitoSilhouette(`mosquito-ink-${this.mosquitoId}`, type).parent = root;
     const sprite = this.makeSprite(`mosquito-sprite-${this.mosquitoId}`, ENEMY_SPRITES[type], type === "sturdy" ? 0.96 : type === "fast" ? 0.74 : 0.68);
     sprite.parent = root;
+    sprite.position.z = 0.035;
     this.mosquitoes.push({ id: this.mosquitoId++, type, hp: info.hp, state: "approaching", x, y, vx: 0, vy: 0, speed: info.speed, biteAt: 0, fallingFor: 0, mesh: root });
     this.telemetry.track("enemy_spawned", { type, stage, threat: Number(this.currentThreat.toFixed(2)), difficulty: this.difficulty });
   }
@@ -613,6 +625,29 @@ class GameWorld {
     return plane;
   }
 
+  private makeMosquitoSilhouette(name: string, type: MosquitoType) {
+    const root = new TransformNode(name, this.scene);
+    const bodySize = type === "sturdy" ? 0.18 : type === "fast" ? 0.115 : 0.14;
+    const body = this.makeDisc(`${name}-body`, bodySize, type === "sturdy" ? Color3.FromHexString("#321E31") : Color3.FromHexString("#161A27"), 0.96);
+    body.scaling.y = 1.26;
+    body.parent = root;
+    body.position.z = -0.025;
+    const wingColor = Color3.FromHexString(type === "fast" ? "#AFC8D6" : "#DCE6E5");
+    for (const side of [-1, 1]) {
+      const wing = this.makeDisc(`${name}-wing-${side}`, type === "sturdy" ? 0.19 : 0.15, wingColor, 0.7);
+      wing.scaling.set(1.2, 0.34, 1);
+      wing.position.set(side * 0.16, 0.08, -0.04);
+      wing.rotation.z = side * 0.38;
+      wing.parent = root;
+      const leg = this.makeDisc(`${name}-leg-${side}`, 0.22, Color3.FromHexString("#171A22"), 0.7);
+      leg.scaling.set(1.1, 0.1, 1);
+      leg.position.set(side * 0.1, -0.1, -0.05);
+      leg.rotation.z = side * 0.52;
+      leg.parent = root;
+    }
+    return root;
+  }
+
   private makeAtlasSprite(name: string, cell: number, size: number) {
     const plane = this.makeSprite(name, cell <= 3 ? (name.startsWith("vfx-") ? VFX_ATLAS : ITEM_ATLAS) : ITEM_ATLAS, size);
     const material = plane.material as StandardMaterial;
@@ -644,13 +679,16 @@ class GameWorld {
   }
 
   private unlockAudio() {
-    if (typeof AudioContext !== "undefined") new AudioContext().resume().catch(() => undefined);
+    const context = this.getAudioContext();
+    if (!context) return;
+    context.resume().catch(() => undefined);
+    this.startMosquitoBuzz(context);
   }
 
   private playTone(frequency: number, duration: number, type: OscillatorType, volume: number) {
-    if (typeof AudioContext === "undefined") return;
+    const context = this.getAudioContext();
+    if (!context) return;
     try {
-      const context = new AudioContext();
       const oscillator = context.createOscillator();
       const gain = context.createGain();
       oscillator.type = type;
@@ -661,6 +699,56 @@ class GameWorld {
       oscillator.start();
       oscillator.stop(context.currentTime + duration);
     } catch { /* Audio is enhancement only. */ }
+  }
+
+  private getAudioContext() {
+    if (typeof AudioContext === "undefined") return null;
+    if (!this.audioContext || this.audioContext.state === "closed") this.audioContext = new AudioContext();
+    return this.audioContext;
+  }
+
+  private startMosquitoBuzz(context: AudioContext) {
+    if (this.buzzOscillator || this.buzzGain) return;
+    const oscillator = context.createOscillator();
+    const filter = context.createBiquadFilter();
+    const gain = context.createGain();
+    oscillator.type = "sawtooth";
+    oscillator.frequency.value = 176;
+    filter.type = "bandpass";
+    filter.frequency.value = 620;
+    filter.Q.value = 1.3;
+    gain.gain.value = 0.0001;
+    oscillator.connect(filter).connect(gain).connect(context.destination);
+    oscillator.start();
+    this.buzzOscillator = oscillator;
+    this.buzzFilter = filter;
+    this.buzzGain = gain;
+  }
+
+  private updateMosquitoBuzz() {
+    const context = this.audioContext;
+    const gain = this.buzzGain;
+    const oscillator = this.buzzOscillator;
+    const filter = this.buzzFilter;
+    if (!context || context.state !== "running" || !gain || !oscillator || !filter) return;
+    const nearest = this.mosquitoes
+      .filter((entry) => entry.state !== "falling")
+      .map((entry) => distance(entry.x, entry.y, 0, this.playerY))
+      .sort((a, b) => a - b)[0];
+    const proximity = nearest === undefined ? 0 : clamp(1 - nearest / 7.2, 0, 1);
+    const targetGain = 0.0001 + proximity * proximity * 0.075;
+    const tone = 172 + proximity * 116 + Math.sin(this.now * 10) * (4 + proximity * 8);
+    gain.gain.setTargetAtTime(targetGain, context.currentTime, 0.065);
+    oscillator.frequency.setTargetAtTime(tone, context.currentTime, 0.05);
+    filter.frequency.setTargetAtTime(480 + proximity * 840, context.currentTime, 0.08);
+  }
+
+  private stopMosquitoBuzz() {
+    this.buzzGain?.gain.setTargetAtTime(0.0001, this.audioContext?.currentTime ?? 0, 0.04);
+    this.buzzOscillator?.stop();
+    this.buzzOscillator = null;
+    this.buzzGain = null;
+    this.buzzFilter = null;
   }
 }
 
