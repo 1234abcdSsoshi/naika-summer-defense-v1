@@ -170,6 +170,7 @@ class GameWorld {
   private readonly callbacks: GameCallbacks;
   private readonly demo = new URLSearchParams(window.location.search).has("demo");
   private readonly inspect = new URLSearchParams(window.location.search).has("inspect");
+  private readonly visualCheck = new URLSearchParams(window.location.search).has("visual-check");
   private readonly rewardPreview = new URLSearchParams(window.location.search).has("reward");
   private readonly itemPreview = new URLSearchParams(window.location.search).has("item");
   private readonly frogPreview = new URLSearchParams(window.location.search).has("frog");
@@ -211,6 +212,11 @@ class GameWorld {
     this.resetRun();
     this.unlockAudio();
     this.running = true;
+    if (this.visualCheck) {
+      this.spawnMosquito();
+      this.spawnCoin(-1.25, 1.55, 1);
+      this.nextSpawnAt = Number.POSITIVE_INFINITY;
+    }
     this.telemetry.start(this.difficulty);
     this.callbacks.onPhase("playing");
     this.emitMosquitoViews(true);
@@ -378,6 +384,9 @@ class GameWorld {
     const sprite = this.makeSprite(`mosquito-sprite-${this.mosquitoId}`, ENEMY_SPRITES[type], type === "sturdy" ? 0.96 : type === "fast" ? 0.74 : 0.68);
     sprite.parent = root;
     sprite.position.z = 0.035;
+    // Visible appearance is rendered by the DOM overlay. Hide this legacy
+    // Babylon sprite stack so it cannot read as a second insect or shadow.
+    root.setEnabled(false);
     this.mosquitoes.push({ id: this.mosquitoId++, type, hp: info.hp, state: "approaching", x, y, vx: 0, vy: 0, speed: info.speed, biteAt: 0, fallingFor: 0, mesh: root });
     this.emitMosquitoViews(true);
     this.telemetry.track("enemy_spawned", { type, stage, threat: Number(this.currentThreat.toFixed(2)), difficulty: this.difficulty });
@@ -499,6 +508,7 @@ class GameWorld {
       const age = this.now - coin.bornAt;
       coin.mesh.position.y = coin.y + Math.sin(age * 9) * 0.08;
       coin.mesh.rotation.z += 0.08;
+      if (this.visualCheck) continue;
       const warn = age > 4;
       coin.mesh.scaling.setAll(warn ? 0.88 + Math.sin(this.now * 20) * 0.12 : 1);
       if (age > 5) {
@@ -578,6 +588,9 @@ class GameWorld {
       const root = new TransformNode(`coin-${this.coinId}`, this.scene);
       const coin = this.makeDisc(`coin-disc-${this.coinId}`, 0.16, Color3.FromHexString("#F6A33A"));
       coin.parent = root;
+      // The DOM small-koban asset is the only intended visual; the canvas disc
+      // would otherwise appear underneath as a false drop shadow.
+      root.setEnabled(false);
       root.position = new Vector3(x + (index ? 0.24 : -0.08), y - 0.18, 0.52);
       this.coinsOnFloor.push({ id: this.coinId++, x: root.position.x, y: root.position.y, bornAt: this.now, mesh: root });
     }
