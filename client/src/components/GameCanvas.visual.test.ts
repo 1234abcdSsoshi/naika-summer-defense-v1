@@ -92,6 +92,6 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).toContain('className="hud-koban"');
     expect(componentSource).toContain('aria-label="小判"');
     expect(componentSource).not.toContain('<div className="coin-readout"><span>◒</span>');
-    expect(styleSource).toContain(".hud-koban { display: inline-block; width: 23px; height: 18px");
+    expect(styleSource).toContain(".hud-koban { display: inline-block; width: 19px; height: 15px");
   });
 });
