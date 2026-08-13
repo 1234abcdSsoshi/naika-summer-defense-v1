@@ -50,7 +50,7 @@ export type HudState = {
 export type ResultState = { score: number; best: number; kills: number; duration: number; analytics?: RunAnalytics };
 export type MosquitoView = { id: number; type: MosquitoType; x: number; y: number };
 export type KobanView = { id: number; x: number; y: number };
-export type PlacedItemView = { id: ItemId; x: number; y: number };
+export type PlacedItemView = { id: ItemId; x: number; y: number; range: number; duration: number | null; remaining: number | null; tone: string };
 
 export type GameCallbacks = {
   onHud: (hud: HudState) => void;
@@ -112,6 +112,13 @@ const ITEM_INFO: Record<ItemId, { price: number; label: string; color: Color3 }>
   cat: { price: 8, label: "招き猫", color: Color3.FromHexString("#F3E6D3") },
   frog: { price: 14, label: "カエル", color: Color3.FromHexString("#7BAF70") },
   daruma: { price: 10, label: "ダルマ", color: Color3.FromHexString("#CC5C4C") },
+};
+
+const ITEM_RUNTIME: Record<ItemId, { duration: number | null; range: number; tone: string }> = {
+  incense: { duration: 15, range: 1.5, tone: "#95ad62" },
+  cat: { duration: 12, range: 2.25, tone: "#f6a33a" },
+  frog: { duration: null, range: 1.7, tone: "#88b76d" },
+  daruma: { duration: 12, range: 2.25, tone: "#cc5c4c" },
 };
 
 const MOSQUITO_INFO: Record<MosquitoType, { hp: number; speed: number; score: number; coin: number; color: Color3 }> = {
@@ -212,6 +219,7 @@ class GameWorld {
     this.threatSum += this.currentThreat;
     this.threatSamples += 1;
     this.updateItems();
+    this.emitPlacedItemViews();
     if (this.now >= this.nextSpawnAt) this.spawnMosquito();
     this.updateMosquitoes(safeDelta);
     this.emitMosquitoViews();
@@ -359,7 +367,7 @@ class GameWorld {
         }
         continue;
       }
-      const cat = this.placed.find((item) => item.id === "cat" && this.now - item.bornAt < 5);
+      const cat = this.placed.find((item) => item.id === "cat" && this.now - item.bornAt < (ITEM_RUNTIME.cat.duration ?? 0));
       const targetX = cat && mosquito.state !== "feeding" ? cat.x : 0;
       const targetY = cat && mosquito.state !== "feeding" ? cat.y : this.playerY + 0.25;
       const targetDistance = distance(mosquito.x, mosquito.y, targetX, targetY);
@@ -399,8 +407,8 @@ class GameWorld {
       }
       if (item.id === "cat") {
         item.mesh.rotation.z = Math.sin(this.now * 10) * 0.08;
-        if (age > 20) this.removeItem(item, "招き猫はひと休み");
-        else if (age > 5 && outer) outer.visibility = 0.5;
+        if (age > (ITEM_RUNTIME.cat.duration ?? 0)) this.removeItem(item, "招き猫はひと休み");
+        else if (age > 8 && outer) outer.visibility = 0.5;
       }
       if (item.id === "frog" && this.now >= item.nextActionAt) {
         const target = this.mosquitoes
@@ -415,7 +423,7 @@ class GameWorld {
       }
       if (item.id === "daruma") {
         item.mesh.rotation.z = Math.sin(this.now * 6) * 0.1;
-        if (age > 12) this.removeItem(item, "ダルマは回収を終えた");
+        if (age > (ITEM_RUNTIME.daruma.duration ?? 0)) this.removeItem(item, "ダルマは回収を終えた");
         if (this.now >= item.nextActionAt) {
           item.nextActionAt = this.now + 0.35;
           const coin = this.coinsOnFloor.find((entry) => distance(item.x, item.y, entry.x, entry.y) < 2.25);
@@ -595,7 +603,11 @@ class GameWorld {
   }
 
   private emitPlacedItemViews() {
-    this.callbacks.onPlacedItems(this.placed.map(({ id, x, y }) => ({ id, x, y })));
+    this.callbacks.onPlacedItems(this.placed.map(({ id, x, y, bornAt }) => {
+      const runtime = ITEM_RUNTIME[id];
+      const remaining = runtime.duration === null ? null : Math.max(0, runtime.duration - (this.now - bornAt));
+      return { id, x, y, range: runtime.range, duration: runtime.duration, remaining, tone: runtime.tone };
+    }));
   }
 
   private endRun() {
