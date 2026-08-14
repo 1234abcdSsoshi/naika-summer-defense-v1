@@ -3,7 +3,7 @@
  * DOM HUDは月白の可読性、行灯橙の行動喚起、和紙の薄い質感を使う。
  * Babylon engine lifecycle is guarded for React 19 StrictMode.
  */
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { createGameScene, type FrogTongueView, type GameHandle, type HudState, type ItemActivationView, type ItemId, type KobanView, type MosquitoView, type PlacedItemView, type ResultState } from "@/game/scene";
 import { DIFFICULTY_PROFILES, type DifficultyId } from "@/game/difficulty";
@@ -13,9 +13,9 @@ const BRAND_MARK = "/manus-storage/naika-mark_1621aaa0.png";
 const BACKGROUND = "/manus-storage/naika-room-background_d0c50701.png";
 const NIGHT_BGM = "/manus-storage/naika-night-defense-loop_0b454f3f.mp3";
 const DEFENSE_ATLAS = "/manus-storage/naika-3d-defense-atlas_d5b41c2f.png";
-const ACTIVATION_PARTICLES = "/manus-storage/naika-defense-activation-particles_8fc27ad1.png";
 const KOBAN_ASSET = "/manus-storage/naika-3d-koban_5621d1b0.png";
 const INSECT_ATLAS = "/manus-storage/naika-3d-insect-atlas_425b7f3c.png";
+const PLACEMENT_RANGE: Record<ItemId, number> = { incense: 1.5, cat: 2.25, frog: 2, daruma: 2.25 };
 
 const initialHud: HudState = {
   health: 100,
@@ -60,7 +60,12 @@ export default function GameCanvas() {
   const [frogTongue, setFrogTongue] = useState<FrogTongueView | null>(null);
   const [itemActivations, setItemActivations] = useState<ItemActivationView[]>([]);
   const [lastItemActivation, setLastItemActivation] = useState<ItemActivationView | null>(null);
+  const [placementPreview, setPlacementPreview] = useState<{ item: ItemId; x: number; y: number } | null>(null);
   const activationPreview = new URLSearchParams(window.location.search).has("activation-check");
+  const catActivations = [
+    ...itemActivations.filter((activation) => activation.item === "cat" && activation.kind === "trigger"),
+    ...(activationPreview ? placedItems.filter((item) => item.id === "cat").map((item) => ({ key: `activation-preview-${item.key}`, item: item.id, x: item.x, y: item.y, tone: item.tone, kind: "trigger" as const })) : []),
+  ];
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -116,7 +121,25 @@ export default function GameCanvas() {
     handleRef.current?.setDifficulty(difficulty);
     handleRef.current?.startRun();
   };
-  const buy = (item: ItemId) => handleRef.current?.purchase(item);
+  const selectItem = (item: ItemId) => {
+    setPlacementPreview({ item, x: -1.55, y: -0.45 });
+    handleRef.current?.purchase(item);
+  };
+  const updatePlacementPreview = (event: PointerEvent<HTMLCanvasElement>) => {
+    if (!hud.placement) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = Math.max(-3.1, Math.min(3.1, ((event.clientX - bounds.left) / bounds.width) * 8 - 4));
+    const y = Math.max(-2.4, Math.min(3.85, 7 - ((event.clientY - bounds.top) / bounds.height) * 14));
+    setPlacementPreview({ item: hud.placement, x, y });
+  };
+  useEffect(() => {
+    const itemToPreview = hud.placement;
+    if (!itemToPreview) {
+      setPlacementPreview(null);
+      return;
+    }
+    setPlacementPreview((current) => current?.item === itemToPreview ? current : { item: itemToPreview, x: -1.55, y: -0.45 });
+  }, [hud.placement]);
   const updateAudioSetting = (kind: "bgm" | "sfx", rawValue: string) => {
     const value = Math.max(0, Math.min(1, Number(rawValue)));
     const next = { ...audioSettings, [kind]: value };
@@ -141,7 +164,7 @@ export default function GameCanvas() {
   return (
     <main className="night-shell" style={{ backgroundImage: `linear-gradient(rgba(10, 24, 45, .35), rgba(10, 24, 45, .72)), url(${BACKGROUND})` }}>
       <audio ref={bgmRef} src={NIGHT_BGM} loop preload="auto" />
-      <canvas ref={canvasRef} className="game-canvas" aria-label="内蚊のゲーム画面" style={{ touchAction: "none" }} />
+      <canvas ref={canvasRef} onPointerMove={updatePlacementPreview} className="game-canvas" aria-label="内蚊のゲーム画面" style={{ touchAction: "none" }} />
       <div className="paper-grain" aria-hidden="true" />
       {phase !== "result" && <aside className="audio-dock" aria-label="音量調整"><div className="audio-dock-title">音量</div><label><span aria-hidden="true">♫</span><input type="range" min="0" max="1" step="0.01" value={audioSettings.bgm} onInput={(event) => updateAudioSetting("bgm", event.currentTarget.value)} aria-label="BGM音量" /><small>BGM</small></label><label><span aria-hidden="true">✦</span><input type="range" min="0" max="1" step="0.01" value={audioSettings.sfx} onInput={(event) => updateAudioSetting("sfx", event.currentTarget.value)} aria-label="効果音音量" /><small>効果音</small></label></aside>}
       {phase === "playing" && <div className="enemy-dom-layer" aria-live="polite" aria-label={`接近中の蚊 ${mosquitoes.length}匹`}>{mosquitoes.map((mosquito) => <div key={mosquito.id} className={`enemy-dom enemy-dom-${mosquito.type}`} style={{ left: `${((mosquito.x + 4) / 8) * 100}%`, top: `${((7 - mosquito.y) / 14) * 100}%`, "--insect-atlas": `url(${INSECT_ATLAS})`, "--enemy-bank": `${mosquito.bank}deg`, "--enemy-scale": `${mosquito.scale}` } as CSSProperties}><span className="enemy-wing enemy-wing-left" /><span className="enemy-wing enemy-wing-right" /><span className="enemy-body" /><span className="enemy-legs" /></div>)}</div>}
@@ -156,9 +179,17 @@ export default function GameCanvas() {
         const mouthX = 36 + Math.cos(tongueAngle) * 17;
         const mouthY = 23 + Math.sin(tongueAngle) * 17;
         const tongueStyle = activeFrogTongue ? { "--tongue-length": `${Math.max(30, Math.min(140, Math.hypot(activeFrogTongue.targetX - item.x, activeFrogTongue.targetY - item.y) * 65))}px`, "--tongue-angle": `${tongueAngle * (180 / Math.PI)}deg`, "--frog-turn": `${tongueAngle * (180 / Math.PI)}deg`, "--frog-mouth-x": `${mouthX}px`, "--frog-mouth-y": `${mouthY}px`, "--tongue-origin-x": `${mouthX}px`, "--tongue-origin-y": `${mouthY}px` } as CSSProperties : undefined;
-        return <div key={item.key} data-babylon-underlay={item.underlayDisabled ? "disabled" : "enabled"} className={`placed-item-dom placed-item-${item.id} ${frogActive ? "is-aiming" : ""} ${tonguePulling ? "is-striking" : ""}`} style={{ ...effectStyle, ...tongueStyle }}><span className="placed-item-range" aria-hidden="true" /><span className="placed-item-art" aria-hidden="true" />{item.id === "incense" && <span className="incense-coil" aria-hidden="true" />}{item.id === "frog" && <span className={`frog-mouth ${frogActive ? "is-open" : ""}`} aria-hidden="true" />}{tonguePulling && <span key={activeFrogTongue?.nonce ?? 0} className="frog-tongue" aria-hidden="true" />}<span className="item-runtime-ring"><i>{item.duration === null ? "∞" : Math.ceil(item.remaining ?? 0)}</i></span></div>;
+        return <div key={item.key} data-babylon-underlay={item.underlayDisabled ? "disabled" : "enabled"} className={`placed-item-dom placed-item-${item.id} ${frogActive ? "is-aiming" : ""} ${tonguePulling ? "is-striking" : ""}`} style={{ ...effectStyle, ...tongueStyle }}><span className="placed-item-art" aria-hidden="true" />{item.id === "incense" && <span className="incense-coil" aria-hidden="true" />}{item.id === "frog" && <span className={`frog-mouth ${frogActive ? "is-open" : ""}`} aria-hidden="true" />}{tonguePulling && <span key={activeFrogTongue?.nonce ?? 0} className="frog-tongue" aria-hidden="true" />}<span className="item-runtime-ring"><i>{item.duration === null ? "∞" : Math.ceil(item.remaining ?? 0)}</i></span></div>;
       })}</div>}
-      {phase === "playing" && <div className="item-activation-layer" data-last-activation={lastItemActivation ? `${lastItemActivation.item}:${lastItemActivation.kind}` : "none"} aria-hidden="true">{[...itemActivations, ...(activationPreview ? placedItems.map((item) => ({ key: `activation-preview-${item.key}`, item: item.id, x: item.x, y: item.y, tone: item.tone, kind: "trigger" as const })) : [])].map((activation) => <div key={activation.key} data-activation-source={activation.item} className={`item-activation-burst item-activation-${activation.item} ${activation.kind === "placed" ? "is-placement" : "is-trigger"} ${activation.key.startsWith("activation-preview-") ? "is-preview" : ""}`} style={{ left: `${((activation.x + 4) / 8) * 100}%`, top: `${((7 - activation.y) / 14) * 100}%`, "--activation-tone": activation.tone, "--activation-particles": `url(${ACTIVATION_PARTICLES})` } as CSSProperties} onAnimationEnd={() => setItemActivations((current) => current.filter((entry) => entry.key !== activation.key))}><span className="activation-ring" /><span className="activation-washi" />{Array.from({ length: 4 }, (_, index) => <span key={index} className={`activation-fleck fleck-${index + 1}`} />)}</div>)}</div>}
+      {phase === "playing" && hud.placement && placementPreview && <div className="placement-preview-layer" aria-hidden="true"><div data-placement-range={placementPreview.item} className="placement-range-preview" style={{ left: `${((placementPreview.x + 4) / 8) * 100}%`, top: `${((7 - placementPreview.y) / 14) * 100}%`, "--range-size": `${Math.round(PLACEMENT_RANGE[placementPreview.item] * 68)}px` } as CSSProperties} /></div>}
+      {phase === "playing" && <div className="item-activation-layer" data-last-activation={lastItemActivation ? `${lastItemActivation.item}:${lastItemActivation.kind}` : "none"} aria-hidden="true">
+        {catActivations.map((activation) => (
+          <div key={activation.key} data-activation-source="cat" className={`cat-radiance ${activation.key.startsWith("activation-preview-") ? "is-preview" : ""}`} style={{ left: `${((activation.x + 4) / 8) * 100}%`, top: `${((7 - activation.y) / 14) * 100}%` }} onAnimationEnd={() => setItemActivations((current) => current.filter((entry) => entry.key !== activation.key))}>
+            <span className="cat-radiance-halo" />
+            {Array.from({ length: 9 }, (_, index) => <span key={index} className="cat-radiance-mote" style={{ "--ray-angle": `${index * 40}deg`, "--ray-distance": `${25 + (index % 3) * 9}px`, "--ray-delay": `${(index % 3) * 0.12}s` } as CSSProperties} />)}
+          </div>
+        ))}
+      </div>}
       {phase === "title" && <div className="title-world-signals" aria-hidden="true"><span className="moon-disc" /><span className="lantern-ring ring-one" /><span className="lantern-ring ring-two" /><span className="mosquito-shape mosquito-one" /><span className="mosquito-shape mosquito-two" /><div className="sleeping-band"><i /><i /><i /></div></div>}
 
       {phase !== "title" && (
@@ -184,7 +215,7 @@ export default function GameCanvas() {
           {(Object.keys(itemCopy) as ItemId[]).map((item) => {
             const data = hud.items[item];
             const ready = hud.coins >= data.price && !data.active;
-            return <button key={item} className={`item-button ${ready ? "is-ready" : ""} ${data.active ? "is-active" : ""}`} onClick={() => buy(item)} disabled={data.active}>
+            return <button key={item} className={`item-button ${ready ? "is-ready" : ""} ${data.active ? "is-active" : ""}`} onClick={() => selectItem(item)} disabled={data.active}>
               <span className={`item-thumb item-thumb-${item}`} aria-hidden="true" style={{ "--defense-atlas": `url(${DEFENSE_ATLAS})` } as CSSProperties} />
               <span className="item-symbol">{itemCopy[item].symbol}</span>
               <span className="item-name">{itemCopy[item].name}</span>

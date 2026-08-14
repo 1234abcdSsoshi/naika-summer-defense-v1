@@ -127,26 +127,25 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain(".placed-item-cat .placed-item-art { border-radius: 14px; background-position: 100% 0 !important; }");
   });
 
-  it("全防衛アイテムは共通の木版画調パーティクルで設置・効果発動を伝える", () => {
-    expect(componentSource).toContain("ACTIVATION_PARTICLES");
-    expect(componentSource).toContain("item-activation-layer");
-    expect(componentSource).toContain("data-activation-source={activation.item}");
-    expect(componentSource).toContain("data-last-activation={lastItemActivation");
-    expect(componentSource).toContain("activation-check");
-    expect(styleSource).toContain(".activation-ring");
-    expect(styleSource).toContain(".activation-washi");
-    expect(styleSource).toContain(".activation-fleck");
-    expect(styleSource).toContain("@keyframes activation-ring-expand");
-    expect(styleSource).toContain("@keyframes activation-fleck-fly");
+  it("有効範囲は設置プレビュー中だけ表示し、設置済みアイテムへ残さない", () => {
+    expect(componentSource).toContain("placement-range-preview");
+    expect(componentSource).toContain("data-placement-range={placementPreview.item}");
+    expect(componentSource).toContain("onPointerMove={updatePlacementPreview}");
+    expect(componentSource).not.toContain('<span className="placed-item-range"');
+    expect(styleSource).toContain(".placement-range-preview");
+    expect(sceneSource).toContain('get("placement-check")');
+    expect(sceneSource).toContain("if (this.placementPreviewCheck) this.placement = this.placementPreviewCheck");
   });
 
-  it("設置時と各アイテムの実効果発動時で共通パーティクルを区別して検証できる", () => {
-    expect(sceneSource).toContain('kind: "placed" | "trigger"');
-    expect(sceneSource).toContain('this.emitItemActivation(this.placed[this.placed.length - 1], "placed")');
-    expect(sceneSource).toContain('this.emitItemActivation(item, "trigger")');
-    expect(sceneSource).toContain('get("item-effect-check")');
-    expect(sceneSource).toContain("private readonly itemEffectCheck: ItemId | null");
-    expect(sceneSource).toContain('if (id === "daruma") this.spawnCoin(safeX + 0.42, safeY + 0.08, 1)');
-    expect(componentSource).toContain('activation.kind === "placed" ? "is-placement" : "is-trigger"');
+  it("穏やかな放射状光粒は招き猫の実効果発動時だけに表示する", () => {
+    expect(componentSource).toContain('activation.item === "cat" && activation.kind === "trigger"');
+    expect(componentSource).toContain('data-activation-source="cat"');
+    expect(componentSource).toContain("cat-radiance-mote");
+    expect(componentSource).not.toContain("ACTIVATION_PARTICLES");
+    expect(componentSource).not.toContain("item-activation-frog");
+    expect(styleSource).toContain(".cat-radiance");
+    expect(styleSource).toContain(".cat-radiance-mote");
+    expect(styleSource).toContain("@keyframes cat-radiance-mote");
+    expect(styleSource).not.toContain(".activation-washi");
   });
 });

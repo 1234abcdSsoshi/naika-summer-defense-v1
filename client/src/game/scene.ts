@@ -191,6 +191,10 @@ class GameWorld {
     const item = new URLSearchParams(window.location.search).get("item");
     return item === "cat" || item === "frog" || item === "daruma" || item === "incense" ? item : "incense";
   })();
+  private readonly placementPreviewCheck: ItemId | null = (() => {
+    const item = new URLSearchParams(window.location.search).get("placement-check");
+    return item === "cat" || item === "frog" || item === "daruma" || item === "incense" ? item : null;
+  })();
   private readonly itemPreviewHold = new URLSearchParams(window.location.search).has("item-hold");
   private readonly itemEffectCheck: ItemId | null = (() => {
     const item = new URLSearchParams(window.location.search).get("item-effect-check");
@@ -248,6 +252,7 @@ class GameWorld {
       this.spawnCoin(this.darumaCoinCheck ? -1.12 : -1.25, this.darumaCoinCheck ? -0.45 : 1.55, 1);
       this.nextSpawnAt = Number.POSITIVE_INFINITY;
     }
+    if (this.placementPreviewCheck) this.placement = this.placementPreviewCheck;
     if (this.frogCoinCheck) this.nextSpawnAt = Number.POSITIVE_INFINITY;
     this.telemetry.start(this.difficulty);
     this.callbacks.onPhase("playing");
