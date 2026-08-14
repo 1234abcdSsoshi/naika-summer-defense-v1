@@ -183,7 +183,7 @@ describe("蚊と小判の描画仕様", () => {
   });
 
   it("寝ている中年男性は体力に応じて刺し跡と表情を変え、体力が尽きると目を覚ます", () => {
-    expect(componentSource).toContain('const SLEEPER_ASSET = "/manus-storage/naika-sleeper-middle-aged-man-states_83f0aa21.png"');
+    expect(componentSource).toContain('const SLEEPER_ASSET = "/manus-storage/naika-sleeper-middle-aged-man-vertical-states_b1914095.png"');
     expect(componentSource).toContain('function getSleeperState(health: number, awake = false)');
     expect(componentSource).toContain('const displayHealth = sleeperPreview ? previewHealth : hud.health;');
     expect(componentSource).toContain('if (health <= 35) return "distressed"');
@@ -221,5 +221,8 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain('.sleeper-state-bitten .sleeper-sprite');
     expect(styleSource).toContain('.sleeper-state-distressed .sleeper-bite');
     expect(styleSource).toContain('.gameover-wake-overlay');
+    expect(styleSource).toContain('bottom: 88px; left: 16%;');
+    expect(styleSource).toContain('width: min(150px, 36vw); height: min(150px, 36vw);');
+    expect(styleSource).toContain('background: var(--sleeper-asset) center / 200% 200% no-repeat');
   });
 });
