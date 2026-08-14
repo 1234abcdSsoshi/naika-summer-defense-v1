@@ -690,7 +690,7 @@ class GameWorld {
     this.spawnCoin(mosquito.x, mosquito.y, info.coin);
     this.score += Math.round(info.score * DIFFICULTY_PROFILES[this.difficulty].rewardMultiplier * (1 + this.combo * 0.05));
     this.telemetry.track("enemy_defeated", { type: mosquito.type, source: handTap ? "tap" : "item", combo: this.combo, score: this.score });
-    this.emitHud(handTap ? `命中！ ${this.combo}連続` : `道具が蚊を退けた`);
+    this.emitHud(handTap ? "命中！" : "道具が蚊を退けた");
   }
 
   private bitePlayer(damage: number) {

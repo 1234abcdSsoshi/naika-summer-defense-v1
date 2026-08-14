@@ -162,4 +162,11 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain(".continue-dialog-backdrop");
     expect(styleSource).toContain(".brand-menu-button");
   });
+
+  it("連続撃破のHUDバッジと連続数を含む通知を表示せず、内部スコア補正は維持する", () => {
+    expect(componentSource).not.toContain("combo-badge");
+    expect(styleSource).not.toContain(".combo-badge");
+    expect(sceneSource).not.toContain("${this.combo}連続");
+    expect(sceneSource).toContain("1 + this.combo * 0.05");
+  });
 });

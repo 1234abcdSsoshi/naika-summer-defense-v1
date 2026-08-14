@@ -209,7 +209,6 @@ export default function GameCanvas() {
             <div className="breath-meter"><span>寝息</span><div><i style={{ width: `${hud.health}%` }} /></div><b>{hud.health}</b></div>
             <div className="coin-readout"><i className="hud-koban" style={{ "--koban-asset": `url(${KOBAN_ASSET})` } as CSSProperties} aria-label="小判" /><b>{hud.coins}</b></div>
           </div>
-          {hud.combo > 1 && <div className="combo-badge">{hud.combo} 連続</div>}
           {hud.notice && <div className="notice">{hud.notice}</div>}
           {hud.placement && <div className="placement-callout"><span>選択中</span><strong>{itemCopy[hud.placement].name}</strong><small>畳をタップして置く</small></div>}
         </div>
