@@ -11,6 +11,8 @@ describe("蚊と小判の描画仕様", () => {
   it("小判上の丸いハイライト要素を描画しない", () => {
     const kobanMarkup = componentSource.match(/koban-dom-layer[\s\S]*?placed-item-dom-layer/)?.[0] ?? "";
     expect(kobanMarkup).not.toContain("<i />");
+    expect(kobanMarkup).not.toMatch(/<i[^>]*>/);
+    expect(styleSource).toContain(".koban-dom span, .koban-dom i { display: none; }");
   });
 
   it("最終スタイルで蚊と小判にドロップシャドウを付与しない", () => {
