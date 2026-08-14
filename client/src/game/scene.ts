@@ -54,6 +54,7 @@ export type MosquitoView = { id: number; type: MosquitoType; x: number; y: numbe
 export type KobanView = { id: number; x: number; y: number };
 export type PlacedItemView = { key: string; id: ItemId; x: number; y: number; range: number; duration: number | null; remaining: number | null; tone: string; underlayDisabled: boolean };
 export type FrogTongueView = { itemX: number; itemY: number; targetX: number; targetY: number; nonce: number; phase: "aim" | "pull" };
+export type ItemActivationView = { key: string; item: ItemId; x: number; y: number; tone: string; kind: "placed" | "trigger" };
 
 export type GameCallbacks = {
   onHud: (hud: HudState) => void;
@@ -61,6 +62,7 @@ export type GameCallbacks = {
   onKobans: (kobans: KobanView[]) => void;
   onPlacedItems: (items: PlacedItemView[]) => void;
   onFrogTongue: (tongue: FrogTongueView | null) => void;
+  onItemActivation: (activation: ItemActivationView) => void;
   onPhase: (phase: "title" | "playing" | "result") => void;
   onResult: (result: ResultState) => void;
 };
@@ -190,6 +192,11 @@ class GameWorld {
     return item === "cat" || item === "frog" || item === "daruma" || item === "incense" ? item : "incense";
   })();
   private readonly itemPreviewHold = new URLSearchParams(window.location.search).has("item-hold");
+  private readonly itemEffectCheck: ItemId | null = (() => {
+    const item = new URLSearchParams(window.location.search).get("item-effect-check");
+    return item === "cat" || item === "frog" || item === "daruma" || item === "incense" ? item : null;
+  })();
+  private readonly catLureCheck = new URLSearchParams(window.location.search).has("cat-lure-check");
   private readonly frogPreview = new URLSearchParams(window.location.search).has("frog");
   private readonly frogPreviewSlow = new URLSearchParams(window.location.search).has("frog-slow");
   private readonly frogPreviewPull = new URLSearchParams(window.location.search).has("frog-pull");
@@ -201,6 +208,7 @@ class GameWorld {
   private frogPreviewComplete = false;
   private frogCoinCheckComplete = false;
   private frogTongueNonce = 0;
+  private activationNonce = 0;
   private audioContext: AudioContext | null = null;
   private buzzOscillator: OscillatorNode | null = null;
   private buzzGain: GainNode | null = null;
@@ -447,7 +455,7 @@ class GameWorld {
         if (progress >= 1) this.killMosquito(mosquito, false);
         continue;
       }
-      const cat = this.placed.find((item) => item.id === "cat" && this.now - item.bornAt < (ITEM_RUNTIME.cat.duration ?? 0));
+      const cat = this.placed.find((item) => item.id === "cat" && (this.itemPreviewHold || this.now - item.bornAt < (ITEM_RUNTIME.cat.duration ?? 0)));
       const targetX = cat && mosquito.state !== "feeding" ? cat.x : 0;
       const targetY = cat && mosquito.state !== "feeding" ? cat.y : this.playerY + 0.25;
       const targetDistance = distance(mosquito.x, mosquito.y, targetX, targetY);
@@ -490,12 +498,22 @@ class GameWorld {
       if (item.id === "incense") {
         item.mesh.scaling.setAll(Math.max(0.72, 1 - age / 64));
         if (age > 15 && !this.itemPreviewHold) this.removeItem(item, "線香の煙が消えた");
-        for (const mosquito of this.mosquitoes) if (mosquito.state !== "falling" && distance(item.x, item.y, mosquito.x, mosquito.y) < 1.5) this.killMosquito(mosquito, false);
+        const targets = this.mosquitoes.filter((mosquito) => mosquito.state !== "falling" && distance(item.x, item.y, mosquito.x, mosquito.y) < ITEM_RUNTIME.incense.range);
+        if (targets.length) {
+          item.nextActionAt = this.now + 0.72;
+          this.emitItemActivation(item, "trigger");
+        }
+        for (const mosquito of targets) this.killMosquito(mosquito, false);
       }
       if (item.id === "cat") {
         item.mesh.rotation.z = Math.sin(this.now * 10) * 0.08;
         if (age > (ITEM_RUNTIME.cat.duration ?? 0) && !this.itemPreviewHold) this.removeItem(item, "招き猫はひと休み");
         else if (age > 8 && outer) outer.visibility = 0.5;
+        const lured = this.mosquitoes.some((mosquito) => mosquito.state !== "falling" && distance(item.x, item.y, mosquito.x, mosquito.y) < ITEM_RUNTIME.cat.range);
+        if (lured && this.now >= item.nextActionAt) {
+          item.nextActionAt = this.now + 1.2;
+          this.emitItemActivation(item, "trigger");
+        }
       }
       if (item.id === "frog") {
         if (age > (ITEM_RUNTIME.frog.duration ?? 0) && !this.frogCoinCheck) this.removeItem(item, "カエルは水辺へ帰った");
@@ -513,6 +531,7 @@ class GameWorld {
             .sort((a, b) => distance(a.x, a.y, item.x, item.y) - distance(b.x, b.y, item.x, item.y))[0];
           if (target) {
             item.nextActionAt = this.now + 1.7;
+            this.emitItemActivation(item, "trigger");
             const tongue = { itemX: item.x, itemY: item.y, targetX: target.x, targetY: target.y, nonce: this.frogTongueNonce++, phase: "aim" as const };
             const dx = target.x - item.x;
             const dy = target.y - item.y;
@@ -551,6 +570,7 @@ class GameWorld {
           if (coin) {
             coin.attractItemKey = item.mesh.name;
             coin.attractNotice = "ダルマが小判を吸い寄せた +1";
+            this.emitItemActivation(item, "trigger");
           }
         }
       }
@@ -742,7 +762,17 @@ class GameWorld {
     // スプライト・グロー・補助ディスクは背後で白い円盤に見えるため描画しない。
     root.setEnabled(false);
     this.placed.push({ id, x: safeX, y: safeY, originX: safeX, originY: safeY, bornAt: this.now, mesh: root, nextActionAt: this.now + 0.5, nextCollectAt: this.now + 0.12 });
+    if ((id === "cat" && this.catLureCheck) || this.itemEffectCheck === id) {
+      const target = this.mosquitoes.find((mosquito) => mosquito.state !== "falling");
+      if (target && id !== "daruma") {
+        target.x = safeX + 1.05;
+        target.y = safeY + 0.08;
+        target.mesh.position.set(target.x, target.y, 0.45);
+      }
+      if (id === "daruma") this.spawnCoin(safeX + 0.42, safeY + 0.08, 1);
+    }
     this.emitPlacedItemViews();
+    this.emitItemActivation(this.placed[this.placed.length - 1], "placed");
     this.placement = null;
     this.itemsPlaced += 1;
     this.playInteractionSfx(this.itemPlaceSfx, 0.42);
@@ -763,6 +793,17 @@ class GameWorld {
       const remaining = runtime.duration === null ? null : Math.max(0, runtime.duration - (this.now - bornAt));
       return { key: mesh.name, id, x, y, range: runtime.range, duration: runtime.duration, remaining, tone: runtime.tone, underlayDisabled: !mesh.isEnabled() };
     }));
+  }
+
+  private emitItemActivation(item: PlacedItem, kind: ItemActivationView["kind"]) {
+    this.callbacks.onItemActivation({
+      key: `item-activation-${this.activationNonce++}`,
+      item: item.id,
+      x: item.x,
+      y: item.y,
+      tone: ITEM_RUNTIME[item.id].tone,
+      kind,
+    });
   }
 
   private endRun() {

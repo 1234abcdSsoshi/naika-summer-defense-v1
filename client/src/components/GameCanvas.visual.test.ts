@@ -126,4 +126,27 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).not.toContain("@keyframes cat-sprite-wave");
     expect(styleSource).toContain(".placed-item-cat .placed-item-art { border-radius: 14px; background-position: 100% 0 !important; }");
   });
+
+  it("全防衛アイテムは共通の木版画調パーティクルで設置・効果発動を伝える", () => {
+    expect(componentSource).toContain("ACTIVATION_PARTICLES");
+    expect(componentSource).toContain("item-activation-layer");
+    expect(componentSource).toContain("data-activation-source={activation.item}");
+    expect(componentSource).toContain("data-last-activation={lastItemActivation");
+    expect(componentSource).toContain("activation-check");
+    expect(styleSource).toContain(".activation-ring");
+    expect(styleSource).toContain(".activation-washi");
+    expect(styleSource).toContain(".activation-fleck");
+    expect(styleSource).toContain("@keyframes activation-ring-expand");
+    expect(styleSource).toContain("@keyframes activation-fleck-fly");
+  });
+
+  it("設置時と各アイテムの実効果発動時で共通パーティクルを区別して検証できる", () => {
+    expect(sceneSource).toContain('kind: "placed" | "trigger"');
+    expect(sceneSource).toContain('this.emitItemActivation(this.placed[this.placed.length - 1], "placed")');
+    expect(sceneSource).toContain('this.emitItemActivation(item, "trigger")');
+    expect(sceneSource).toContain('get("item-effect-check")');
+    expect(sceneSource).toContain("private readonly itemEffectCheck: ItemId | null");
+    expect(sceneSource).toContain('if (id === "daruma") this.spawnCoin(safeX + 0.42, safeY + 0.08, 1)');
+    expect(componentSource).toContain('activation.kind === "placed" ? "is-placement" : "is-trigger"');
+  });
 });

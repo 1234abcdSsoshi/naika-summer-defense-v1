@@ -5,7 +5,7 @@
  */
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Engine } from "@babylonjs/core/Engines/engine";
-import { createGameScene, type FrogTongueView, type GameHandle, type HudState, type ItemId, type KobanView, type MosquitoView, type PlacedItemView, type ResultState } from "@/game/scene";
+import { createGameScene, type FrogTongueView, type GameHandle, type HudState, type ItemActivationView, type ItemId, type KobanView, type MosquitoView, type PlacedItemView, type ResultState } from "@/game/scene";
 import { DIFFICULTY_PROFILES, type DifficultyId } from "@/game/difficulty";
 import { getLocalEventSummary } from "@/game/telemetry";
 
@@ -13,6 +13,7 @@ const BRAND_MARK = "/manus-storage/naika-mark_1621aaa0.png";
 const BACKGROUND = "/manus-storage/naika-room-background_d0c50701.png";
 const NIGHT_BGM = "/manus-storage/naika-night-defense-loop_0b454f3f.mp3";
 const DEFENSE_ATLAS = "/manus-storage/naika-3d-defense-atlas_d5b41c2f.png";
+const ACTIVATION_PARTICLES = "/manus-storage/naika-defense-activation-particles_8fc27ad1.png";
 const KOBAN_ASSET = "/manus-storage/naika-3d-koban_5621d1b0.png";
 const INSECT_ATLAS = "/manus-storage/naika-3d-insect-atlas_425b7f3c.png";
 
@@ -57,6 +58,9 @@ export default function GameCanvas() {
   const [kobans, setKobans] = useState<KobanView[]>([]);
   const [placedItems, setPlacedItems] = useState<PlacedItemView[]>([]);
   const [frogTongue, setFrogTongue] = useState<FrogTongueView | null>(null);
+  const [itemActivations, setItemActivations] = useState<ItemActivationView[]>([]);
+  const [lastItemActivation, setLastItemActivation] = useState<ItemActivationView | null>(null);
+  const activationPreview = new URLSearchParams(window.location.search).has("activation-check");
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -70,6 +74,10 @@ export default function GameCanvas() {
       onKobans: setKobans,
       onPlacedItems: setPlacedItems,
       onFrogTongue: setFrogTongue,
+      onItemActivation: (activation) => {
+        setLastItemActivation(activation);
+        setItemActivations((current) => [...current.slice(-11), activation]);
+      },
       onPhase: setPhase,
       onResult: (nextResult) => {
         setResult(nextResult);
@@ -150,6 +158,7 @@ export default function GameCanvas() {
         const tongueStyle = activeFrogTongue ? { "--tongue-length": `${Math.max(30, Math.min(140, Math.hypot(activeFrogTongue.targetX - item.x, activeFrogTongue.targetY - item.y) * 65))}px`, "--tongue-angle": `${tongueAngle * (180 / Math.PI)}deg`, "--frog-turn": `${tongueAngle * (180 / Math.PI)}deg`, "--frog-mouth-x": `${mouthX}px`, "--frog-mouth-y": `${mouthY}px`, "--tongue-origin-x": `${mouthX}px`, "--tongue-origin-y": `${mouthY}px` } as CSSProperties : undefined;
         return <div key={item.key} data-babylon-underlay={item.underlayDisabled ? "disabled" : "enabled"} className={`placed-item-dom placed-item-${item.id} ${frogActive ? "is-aiming" : ""} ${tonguePulling ? "is-striking" : ""}`} style={{ ...effectStyle, ...tongueStyle }}><span className="placed-item-range" aria-hidden="true" /><span className="placed-item-art" aria-hidden="true" />{item.id === "incense" && <span className="incense-coil" aria-hidden="true" />}{item.id === "frog" && <span className={`frog-mouth ${frogActive ? "is-open" : ""}`} aria-hidden="true" />}{tonguePulling && <span key={activeFrogTongue?.nonce ?? 0} className="frog-tongue" aria-hidden="true" />}<span className="item-runtime-ring"><i>{item.duration === null ? "∞" : Math.ceil(item.remaining ?? 0)}</i></span></div>;
       })}</div>}
+      {phase === "playing" && <div className="item-activation-layer" data-last-activation={lastItemActivation ? `${lastItemActivation.item}:${lastItemActivation.kind}` : "none"} aria-hidden="true">{[...itemActivations, ...(activationPreview ? placedItems.map((item) => ({ key: `activation-preview-${item.key}`, item: item.id, x: item.x, y: item.y, tone: item.tone, kind: "trigger" as const })) : [])].map((activation) => <div key={activation.key} data-activation-source={activation.item} className={`item-activation-burst item-activation-${activation.item} ${activation.kind === "placed" ? "is-placement" : "is-trigger"} ${activation.key.startsWith("activation-preview-") ? "is-preview" : ""}`} style={{ left: `${((activation.x + 4) / 8) * 100}%`, top: `${((7 - activation.y) / 14) * 100}%`, "--activation-tone": activation.tone, "--activation-particles": `url(${ACTIVATION_PARTICLES})` } as CSSProperties} onAnimationEnd={() => setItemActivations((current) => current.filter((entry) => entry.key !== activation.key))}><span className="activation-ring" /><span className="activation-washi" />{Array.from({ length: 4 }, (_, index) => <span key={index} className={`activation-fleck fleck-${index + 1}`} />)}</div>)}</div>}
       {phase === "title" && <div className="title-world-signals" aria-hidden="true"><span className="moon-disc" /><span className="lantern-ring ring-one" /><span className="lantern-ring ring-two" /><span className="mosquito-shape mosquito-one" /><span className="mosquito-shape mosquito-two" /><div className="sleeping-band"><i /><i /><i /></div></div>}
 
       {phase !== "title" && (
