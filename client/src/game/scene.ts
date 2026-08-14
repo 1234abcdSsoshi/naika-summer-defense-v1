@@ -186,6 +186,21 @@ class GameWorld {
   private readonly demo = new URLSearchParams(window.location.search).has("demo");
   private readonly inspect = new URLSearchParams(window.location.search).has("inspect");
   private readonly visualCheck = new URLSearchParams(window.location.search).has("visual-check");
+  private readonly gameOverPreview = new URLSearchParams(window.location.search).has("game-over-check");
+  private readonly gameOverResultPreview = new URLSearchParams(window.location.search).has("game-over-result-check");
+  private readonly damageDemoStage = (() => {
+    const stage = new URLSearchParams(window.location.search).get("damage-demo");
+    return stage === "bitten" || stage === "distressed" || stage === "gameover" ? stage : null;
+  })();
+  private readonly mosquitoFlowDemo = (() => {
+    const params = new URLSearchParams(window.location.search);
+    const stage = params.get("mosquito-flow-demo") ?? (params.has("mosquito-flow-result-demo") ? "gameover" : null);
+    return stage === "bitten" || stage === "distressed" || stage === "gameover" ? stage : null;
+  })();
+  private readonly healthPreview = (() => {
+    const value = Number(new URLSearchParams(window.location.search).get("health-check"));
+    return value === 62 || value === 28 ? value : null;
+  })();
   private readonly rewardPreview = new URLSearchParams(window.location.search).has("reward");
   private readonly itemPreview = new URLSearchParams(window.location.search).has("item");
   private readonly itemPreviewId: ItemId = (() => {
@@ -212,6 +227,8 @@ class GameWorld {
   private itemPreviewComplete = false;
   private frogPreviewComplete = false;
   private frogCoinCheckComplete = false;
+  private gameOverPreviewComplete = false;
+  private damageDemoHits = 0;
   private frogTongueNonce = 0;
   private activationNonce = 0;
   private audioContext: AudioContext | null = null;
@@ -242,13 +259,27 @@ class GameWorld {
     blanket.scaling.y = 0.48;
     blanket.parent = this.playerRoot;
     blanket.position = new Vector3(0.24, -0.55, -0.04);
+    // The React DOM character sprite is the sole visible sleeper representation.
+    this.playerRoot.setEnabled(false);
   }
 
   startRun = () => {
     this.resetRun();
+    if (this.healthPreview !== null) {
+      this.health = this.healthPreview;
+      this.damageTaken = 100 - this.health;
+    }
+    if (this.mosquitoFlowDemo) {
+      this.health = this.mosquitoFlowDemo === "bitten" ? 76 : this.mosquitoFlowDemo === "distressed" ? 40 : 8;
+      this.damageTaken = 100 - this.health;
+    }
     this.unlockAudio();
     this.running = true;
     if (this.visualCheck) {
+      if (!this.darumaPreviewPull && !this.darumaCoinCheck) this.spawnMosquito();
+      this.spawnCoin(this.darumaCoinCheck ? -1.12 : -1.25, this.darumaCoinCheck ? -0.45 : 1.55, 1);
+      this.nextSpawnAt = Number.POSITIVE_INFINITY;
+    } else if (this.gameOverPreview || this.gameOverResultPreview || this.damageDemoStage || this.mosquitoFlowDemo) {
       if (!this.darumaPreviewPull && !this.darumaCoinCheck) this.spawnMosquito();
       this.spawnCoin(this.darumaCoinCheck ? -1.12 : -1.25, this.darumaCoinCheck ? -0.45 : 1.55, 1);
       this.nextSpawnAt = Number.POSITIVE_INFINITY;
@@ -259,6 +290,11 @@ class GameWorld {
     this.callbacks.onPhase("playing");
     this.emitMosquitoViews(true);
     this.emitHud(`${DIFFICULTY_PROFILES[this.difficulty].label}。蚊を落として、寝息を守ろう`);
+    if (this.damageDemoStage) {
+      this.runDamageDemo(true);
+      if (!this.running) return;
+    }
+    if (this.mosquitoFlowDemo) this.startMosquitoFlowDemo();
   };
 
   setDifficulty = (difficulty: DifficultyId) => {
@@ -311,6 +347,13 @@ class GameWorld {
     if (this.frogCoinCheck && !this.frogCoinCheckComplete && this.now > 0.18) {
       this.frogCoinCheckComplete = true;
       this.spawnCoin(-1.12, -0.45, 1);
+    }
+    if ((this.gameOverPreview || this.gameOverResultPreview) && !this.gameOverPreviewComplete && this.now > 0.55) {
+      this.gameOverPreviewComplete = true;
+      this.health = 0;
+      this.damageTaken += 100;
+      this.endRun();
+      return;
     }
     if (this.rewardPreview && !this.rewardPreviewComplete && this.now > 0.35) {
       const target = this.mosquitoes.find((entry) => entry.state !== "falling");
@@ -408,6 +451,8 @@ class GameWorld {
     this.itemPreviewComplete = false;
     this.frogPreviewComplete = false;
     this.frogCoinCheckComplete = false;
+    this.gameOverPreviewComplete = false;
+    this.damageDemoHits = 0;
     this.callbacks.onMosquitoes([]);
     this.callbacks.onKobans([]);
     this.callbacks.onPlacedItems([]);
@@ -476,6 +521,7 @@ class GameWorld {
         mosquito.state = "feeding";
         if (!mosquito.biteAt) mosquito.biteAt = this.now + 1.1;
       }
+      if (this.mosquitoFlowDemo && mosquito.state === "feeding") mosquito.biteAt = Math.min(mosquito.biteAt, this.now);
       if (mosquito.state === "feeding") {
         mosquito.mesh.position.y = this.playerY + 0.15 + Math.sin(this.now * 8 + mosquito.id) * 0.06;
         mosquito.mesh.position.x = Math.sin(this.now * 5 + mosquito.id) * 0.32;
@@ -484,6 +530,11 @@ class GameWorld {
         if (this.now >= mosquito.biteAt) {
           mosquito.biteAt = this.now + (mosquito.type === "fast" ? 1.65 : 2.05);
           this.bitePlayer(mosquito.type === "sturdy" ? 9 : mosquito.type === "fast" ? 7 : 6);
+          if (this.mosquitoFlowDemo) {
+            mosquito.state = "falling";
+            mosquito.fallingFor = 0;
+            this.nextSpawnAt = Number.POSITIVE_INFINITY;
+          }
         }
       } else {
         const dx = targetX - mosquito.x;
@@ -704,8 +755,35 @@ class GameWorld {
     this.playerRoot.scaling.y = 0.86 + this.health / 800;
     this.playTone(185, 0.12, "sawtooth", 0.06);
     navigator.vibrate?.([18, 24, 18]);
+    this.emitHud(this.health <= 0 ? "蚊に起こされてしまった…" : "寝息が細くなっている…");
     if (this.health <= 0) this.endRun();
-    else this.emitHud("寝息が細くなっている…");
+  }
+
+  private runDamageDemo(immediate = false) {
+    const targetHits = this.damageDemoStage === "bitten" ? 1 : this.damageDemoStage === "distressed" ? 2 : 3;
+    while (this.damageDemoHits < targetHits) {
+      const nextAt = 0.42 + this.damageDemoHits * 0.44;
+      if (!immediate && this.now < nextAt) return;
+      this.damageDemoHits += 1;
+      this.bitePlayer(this.damageDemoStage === "gameover" ? 34 : 38);
+      if (!this.running) return;
+    }
+  }
+
+  private startMosquitoFlowDemo() {
+    this.spawnMosquito();
+    const mosquito = this.mosquitoes[this.mosquitoes.length - 1];
+    if (!mosquito) return;
+    mosquito.type = "sturdy";
+    mosquito.hp = MOSQUITO_INFO.sturdy.hp;
+    mosquito.speed = 18;
+    mosquito.x = 0;
+    mosquito.y = this.playerY + 0.76;
+    mosquito.vx = 0;
+    mosquito.vy = 0;
+    mosquito.mesh.position.set(mosquito.x, mosquito.y, 0.45);
+    this.nextSpawnAt = Number.POSITIVE_INFINITY;
+    this.emitHud("蚊が寝息へ近づいている…");
   }
 
   private spawnCoin(x: number, y: number, value: number) {

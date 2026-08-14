@@ -15,7 +15,24 @@ const NIGHT_BGM = "/manus-storage/naika-night-defense-loop_0b454f3f.mp3";
 const DEFENSE_ATLAS = "/manus-storage/naika-3d-defense-atlas_d5b41c2f.png";
 const KOBAN_ASSET = "/manus-storage/naika-3d-koban-true-alpha_76e66136.png";
 const INSECT_ATLAS = "/manus-storage/naika-3d-insect-atlas_425b7f3c.png";
+const SLEEPER_ASSET = "/manus-storage/naika-sleeper-middle-aged-man-states_83f0aa21.png";
 const PLACEMENT_RANGE: Record<ItemId, number> = { incense: 1.5, cat: 2.25, frog: 2, daruma: 2.25 };
+
+type SleeperState = "rested" | "bitten" | "distressed" | "awake";
+
+function getSleeperState(health: number, awake = false): SleeperState {
+  if (awake || health <= 0) return "awake";
+  if (health <= 35) return "distressed";
+  if (health <= 70) return "bitten";
+  return "rested";
+}
+
+const sleeperStatusCopy: Record<SleeperState, string> = {
+  rested: "安らかに眠っている",
+  bitten: "虫刺されが増え、眉が少し曇っている",
+  distressed: "虫刺されが増え、眠りが浅くなっている",
+  awake: "蚊に起こされ、目を覚ました",
+};
 
 const initialHud: HudState = {
   health: 100,
@@ -62,7 +79,15 @@ export default function GameCanvas() {
   const [lastItemActivation, setLastItemActivation] = useState<ItemActivationView | null>(null);
   const [placementPreview, setPlacementPreview] = useState<{ item: ItemId; x: number; y: number } | null>(null);
   const [showContinuePrompt, setShowContinuePrompt] = useState(false);
+  const [isGameOverWaking, setIsGameOverWaking] = useState(false);
   const activationPreview = new URLSearchParams(window.location.search).has("activation-check");
+  const sleeperPreview = new URLSearchParams(window.location.search).get("sleeper");
+  const gameOverPreview = new URLSearchParams(window.location.search).has("game-over-check");
+  const gameOverResultPreview = new URLSearchParams(window.location.search).has("game-over-result-check");
+  const mosquitoFlowResultPreview = new URLSearchParams(window.location.search).has("mosquito-flow-result-demo");
+  const previewHealth = sleeperPreview === "bitten" ? 62 : sleeperPreview === "distressed" ? 28 : sleeperPreview === "awake" ? 0 : hud.health;
+  const displayHealth = sleeperPreview ? previewHealth : hud.health;
+  const sleeperState = getSleeperState(displayHealth, phase === "result" || isGameOverWaking);
   const catActivations = [
     ...itemActivations.filter((activation) => activation.item === "cat" && activation.kind === "trigger"),
     ...(activationPreview ? placedItems.filter((item) => item.id === "cat").map((item) => ({ key: `activation-preview-${item.key}`, item: item.id, x: item.x, y: item.y, tone: item.tone, kind: "trigger" as const })) : []),
@@ -74,6 +99,7 @@ export default function GameCanvas() {
     startedRef.current = true;
     const engine = new Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true, adaptToDeviceRatio: true });
     let disposed = false;
+    let gameOverTimer: number | undefined;
     createGameScene(engine, canvas, {
       onHud: setHud,
       onMosquitoes: setMosquitoes,
@@ -84,7 +110,19 @@ export default function GameCanvas() {
         setLastItemActivation(activation);
         setItemActivations((current) => [...current.slice(-11), activation]);
       },
-      onPhase: setPhase,
+      onPhase: (nextPhase) => {
+        if (nextPhase === "result") {
+          setIsGameOverWaking(true);
+          gameOverTimer = window.setTimeout(() => {
+            setIsGameOverWaking(false);
+            setPhase("result");
+          }, mosquitoFlowResultPreview ? 90 : 1180);
+          return;
+        }
+        if (gameOverTimer) window.clearTimeout(gameOverTimer);
+        setIsGameOverWaking(false);
+        setPhase(nextPhase);
+      },
       onResult: (nextResult) => {
         setResult(nextResult);
         setEventSummary(getLocalEventSummary());
@@ -97,7 +135,7 @@ export default function GameCanvas() {
       handleRef.current = handle;
       engine.runRenderLoop(() => handle.scene.render());
       const params = new URLSearchParams(window.location.search);
-      if (params.has("visual-check") || params.has("frog-coin-check")) {
+      if (params.has("visual-check") || params.has("frog-coin-check") || params.has("game-over-check") || params.has("game-over-result-check") || params.has("damage-demo") || params.has("mosquito-flow-demo") || params.has("mosquito-flow-result-demo")) {
         handle.startRun();
       }
     });
@@ -105,6 +143,7 @@ export default function GameCanvas() {
     window.addEventListener("resize", resize);
     return () => {
       disposed = true;
+      if (gameOverTimer) window.clearTimeout(gameOverTimer);
       window.removeEventListener("resize", resize);
       handleRef.current?.dispose();
       handleRef.current = null;
@@ -115,6 +154,7 @@ export default function GameCanvas() {
 
   const start = () => {
     setShowContinuePrompt(false);
+    setIsGameOverWaking(false);
     const bgm = bgmRef.current;
     if (bgm) {
       bgm.volume = audioSettings.bgm;
@@ -206,7 +246,7 @@ export default function GameCanvas() {
             <div className="score-cluster"><span>夜更けの得点</span><strong>{hud.score.toLocaleString()}</strong></div>
           </div>
           <div className="hud-readout">
-            <div className="breath-meter"><span>寝息</span><div><i style={{ width: `${hud.health}%` }} /></div><b>{hud.health}</b></div>
+            <div className="breath-meter"><span>寝息</span><div><i style={{ width: `${displayHealth}%` }} /></div><b>{displayHealth}</b></div>
             <div className="coin-readout"><i className="hud-koban" style={{ "--koban-asset": `url(${KOBAN_ASSET})` } as CSSProperties} aria-label="小判" /><b>{hud.coins}</b></div>
           </div>
           {hud.notice && <div className="notice">{hud.notice}</div>}
@@ -214,7 +254,7 @@ export default function GameCanvas() {
         </div>
       )}
 
-      {phase === "playing" && <div className="game-sleeper-anchor" aria-hidden="true"><span className="sleeper-face" /><span className="sleeper-futon" /><i /><i /><i /><small>寝息を守る</small></div>}
+      {phase === "playing" && <div className={`game-sleeper-anchor sleeper-state-${sleeperState}`} data-sleeper-state={sleeperState} role="img" aria-label={`中年男性：${sleeperStatusCopy[sleeperState]}`} style={{ "--sleeper-asset": `url(${SLEEPER_ASSET})` } as CSSProperties}><span className="sleeper-sprite" /><span className="sleeper-bite sleeper-bite-one" /><span className="sleeper-bite sleeper-bite-two" /><span className="sleeper-bite sleeper-bite-three" /><span className="sleeper-bite sleeper-bite-four" /><span className="sleeper-bite sleeper-bite-five" /><span className="sleeper-worry-lines" aria-hidden="true" /><small>{sleeperStatusCopy[sleeperState]}</small></div>}
 
       {phase === "playing" && (
         <nav className="item-tray" aria-label="防衛道具">
@@ -247,10 +287,13 @@ export default function GameCanvas() {
         </section>
       )}
 
-      {phase === "result" && (
+      {(gameOverPreview || isGameOverWaking) && <div className="gameover-wake-overlay" role="status" aria-live="assertive"><div className="gameover-wake-character" style={{ "--sleeper-asset": `url(${SLEEPER_ASSET})` } as CSSProperties}><span className="sleeper-sprite" /></div><p>びくっ！　目を覚ました。</p></div>}
+
+      {phase === "result" && !gameOverPreview && (
         <section className="result-card" aria-live="assertive">
-          <p className="eyebrow">夜明け前の記録</p>
-          <h2>寝息が、止まった。</h2>
+          <div className="result-sleeper" style={{ "--sleeper-asset": `url(${SLEEPER_ASSET})` } as CSSProperties}><span className="sleeper-sprite" /></div>
+          <p className="eyebrow">蚊に起こされた夜の記録</p>
+          <h2>目を覚ましてしまった。</h2>
           <div className="result-score"><span>得点</span><strong>{result.score.toLocaleString()}</strong></div>
           <dl><div><dt>最高点</dt><dd>{result.best.toLocaleString()}</dd></div><div><dt>退けた蚊</dt><dd>{result.kills}</dd></div><div><dt>守れた時間</dt><dd>{result.duration}秒</dd></div></dl>
           {result.analytics && <div className="analysis-slip"><p>今夜の記録 <span>{DIFFICULTY_PROFILES[result.analytics.difficulty].shortLabel}</span></p><div><b>命中率 {Math.round(result.analytics.hitRate * 100)}%</b><b>被弾 {result.analytics.damageTaken}</b><b>脅威 {result.analytics.averageThreat.toFixed(2)}x</b></div><small>端末内イベント {eventSummary.events}件／完走 {eventSummary.completedRuns}回</small></div>}
