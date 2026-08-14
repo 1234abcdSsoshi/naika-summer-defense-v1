@@ -13,6 +13,7 @@ describe("蚊と小判の描画仕様", () => {
     expect(kobanMarkup).not.toContain("<i />");
     expect(kobanMarkup).not.toMatch(/<i[^>]*>/);
     expect(styleSource).toContain(".koban-dom span, .koban-dom i { display: none; }");
+    expect(componentSource).toContain('const KOBAN_ASSET = "/manus-storage/naika-3d-koban-true-alpha_76e66136.png"');
   });
 
   it("最終スタイルで蚊と小判にドロップシャドウを付与しない", () => {
