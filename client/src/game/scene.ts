@@ -333,10 +333,10 @@ class GameWorld {
     }
 
     const coin = this.coinsOnFloor
-      .filter((entry) => distance(entry.x, entry.y, x, y) < 0.48)
+      .filter((entry) => distance(x, y, entry.x, entry.y) < 0.42)
       .sort((a, b) => a.bornAt - b.bornAt)[0];
     if (coin) {
-      this.collectCoin(coin, "指先で回収 +1");
+      this.collectCoin(coin);
       return;
     }
 
@@ -543,7 +543,7 @@ class GameWorld {
             .filter((mosquito) => (mosquito.state === "approaching" || mosquito.state === "feeding") && distance(item.x, item.y, mosquito.x, mosquito.y) < ITEM_RUNTIME.frog.range)
             .sort((a, b) => distance(a.x, a.y, item.x, item.y) - distance(b.x, b.y, item.x, item.y))[0];
           if (target) {
-            item.nextActionAt = this.now + 1.7;
+            item.nextActionAt = this.now + 0.85;
             this.emitItemActivation(item, "trigger");
             const tongue = { itemX: item.x, itemY: item.y, targetX: target.x, targetY: target.y, nonce: this.frogTongueNonce++, phase: "aim" as const };
             const dx = target.x - item.x;
@@ -690,7 +690,7 @@ class GameWorld {
     this.spawnCoin(mosquito.x, mosquito.y, info.coin);
     this.score += Math.round(info.score * DIFFICULTY_PROFILES[this.difficulty].rewardMultiplier * (1 + this.combo * 0.05));
     this.telemetry.track("enemy_defeated", { type: mosquito.type, source: handTap ? "tap" : "item", combo: this.combo, score: this.score });
-    this.emitHud(handTap ? "命中！" : "道具が蚊を退けた");
+    this.emitHud(handTap ? undefined : "道具が蚊を退けた");
   }
 
   private bitePlayer(damage: number) {
@@ -722,7 +722,7 @@ class GameWorld {
     this.emitKobanViews(true);
   }
 
-  private collectCoin(coin: Coin, notice: string) {
+  private collectCoin(coin: Coin, notice?: string) {
     if (!this.coinsOnFloor.includes(coin)) return;
     this.coins += 1;
     this.coinsCollected += 1;
@@ -730,7 +730,7 @@ class GameWorld {
     this.coinsOnFloor = this.coinsOnFloor.filter((entry) => entry !== coin);
     this.emitKobanViews(true);
     this.playInteractionSfx(this.kobanCollectSfx, 0.48);
-    this.telemetry.track("coin_collected", { coins: this.coins, source: notice.includes("ダルマ") ? "daruma" : "tap" });
+    this.telemetry.track("coin_collected", { coins: this.coins, source: notice?.includes("ダルマ") ? "daruma" : "tap" });
     this.emitHud(notice);
   }
 

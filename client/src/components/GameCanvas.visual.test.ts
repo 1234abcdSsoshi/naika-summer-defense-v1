@@ -169,4 +169,13 @@ describe("蚊と小判の描画仕様", () => {
     expect(sceneSource).not.toContain("${this.combo}連続");
     expect(sceneSource).toContain("1 + this.combo * 0.05");
   });
+
+  it("不要な命中・手動回収案内を表示せず、カエルは半分の間隔で捕食し、蚊を最前面へ描画する", () => {
+    expect(sceneSource).not.toContain('"命中！"');
+    expect(sceneSource).not.toContain('"指先で回収 +1"');
+    expect(sceneSource).toContain("item.nextActionAt = this.now + 0.85");
+    expect(styleSource).toContain(".enemy-dom-layer { pointer-events: none; position: absolute; z-index: 6;");
+    expect(styleSource).toContain(".koban-dom-layer { pointer-events: none; position: absolute; z-index: 4;");
+    expect(styleSource).toContain(".placed-item-dom-layer { pointer-events: none; position: absolute; z-index: 3;");
+  });
 });
