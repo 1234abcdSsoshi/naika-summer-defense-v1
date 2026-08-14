@@ -61,6 +61,7 @@ export default function GameCanvas() {
   const [itemActivations, setItemActivations] = useState<ItemActivationView[]>([]);
   const [lastItemActivation, setLastItemActivation] = useState<ItemActivationView | null>(null);
   const [placementPreview, setPlacementPreview] = useState<{ item: ItemId; x: number; y: number } | null>(null);
+  const [showContinuePrompt, setShowContinuePrompt] = useState(false);
   const activationPreview = new URLSearchParams(window.location.search).has("activation-check");
   const catActivations = [
     ...itemActivations.filter((activation) => activation.item === "cat" && activation.kind === "trigger"),
@@ -113,6 +114,7 @@ export default function GameCanvas() {
   }, []);
 
   const start = () => {
+    setShowContinuePrompt(false);
     const bgm = bgmRef.current;
     if (bgm) {
       bgm.volume = audioSettings.bgm;
@@ -153,12 +155,17 @@ export default function GameCanvas() {
     handleRef.current?.setDifficulty(nextDifficulty);
   };
   const returnToTitle = () => {
+    handleRef.current?.abandonRun();
     const bgm = bgmRef.current;
     if (bgm) {
       bgm.pause();
       bgm.currentTime = 0;
     }
     setPhase("title");
+  };
+  const exitToStageSelection = () => {
+    setShowContinuePrompt(false);
+    returnToTitle();
   };
 
   return (
@@ -195,7 +202,7 @@ export default function GameCanvas() {
       {phase !== "title" && (
         <div className="hud" aria-live="polite">
           <div className="hud-top">
-            <div className="brand-mini"><img src={BRAND_MARK} alt="" /><span>内蚊</span></div>
+            <button type="button" className="brand-mini brand-menu-button" onClick={() => setShowContinuePrompt(true)} aria-label="ゲームを続けるか確認する"><img src={BRAND_MARK} alt="" /><span>内蚊</span></button>
             <div className="score-cluster"><span>夜更けの得点</span><strong>{hud.score.toLocaleString()}</strong></div>
           </div>
           <div className="hud-readout">
@@ -224,6 +231,8 @@ export default function GameCanvas() {
           })}
         </nav>
       )}
+
+      {phase === "playing" && showContinuePrompt && <div className="continue-dialog-backdrop" role="presentation"><section className="continue-dialog" role="dialog" aria-modal="true" aria-labelledby="continue-dialog-title"><p className="eyebrow">夜の途中ですが</p><h2 id="continue-dialog-title">ゲームを続けますか？</h2><p>「いいえ」を選ぶと、難易度を選べるステージ選択画面へ戻ります。</p><div><button type="button" className="continue-yes" onClick={() => setShowContinuePrompt(false)}>はい、続ける</button><button type="button" className="continue-no" onClick={exitToStageSelection}>いいえ</button></div></section></div>}
 
       {phase === "title" && (
         <section className="title-card" aria-labelledby="game-title">

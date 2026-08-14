@@ -70,6 +70,7 @@ export type GameCallbacks = {
 export type GameHandle = {
   scene: Scene;
   startRun: () => void;
+  abandonRun: () => void;
   purchase: (item: ItemId) => void;
   setDifficulty: (difficulty: DifficultyId) => void;
   retry: () => void;
@@ -267,6 +268,13 @@ class GameWorld {
   };
 
   retry = () => this.startRun();
+
+  abandonRun = () => {
+    if (!this.running) return;
+    this.running = false;
+    this.placement = null;
+    this.callbacks.onPhase("title");
+  };
 
   update(delta: number) {
     const safeDelta = Math.min(delta, 0.05);
@@ -1067,6 +1075,7 @@ export async function createGameScene(engine: Engine, canvas: HTMLCanvasElement,
   const handle: GameHandle = {
     scene,
     startRun: world.startRun,
+    abandonRun: world.abandonRun,
     purchase: world.purchase,
     setDifficulty: world.setDifficulty,
     retry: world.retry,
