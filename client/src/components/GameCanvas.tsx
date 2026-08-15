@@ -272,7 +272,7 @@ export default function GameCanvas() {
         </nav>
       )}
 
-      {phase === "playing" && showContinuePrompt && <div className="continue-dialog-backdrop" role="presentation"><section className="continue-dialog" role="dialog" aria-modal="true" aria-labelledby="continue-dialog-title"><p className="eyebrow">夜の途中ですが</p><h2 id="continue-dialog-title">最初の画面へ戻りますか？</h2><p>「戻る」を選ぶと、現在のプレイを終了して最初の画面へ戻ります。</p><div><button type="button" className="continue-yes" onClick={() => setShowContinuePrompt(false)}>キャンセル</button><button type="button" className="continue-no" onClick={returnToTitle}>戻る</button></div></section></div>}
+      {phase === "playing" && showContinuePrompt && <div className="continue-dialog-backdrop" role="presentation"><section className="continue-dialog" role="dialog" aria-modal="true" aria-labelledby="continue-dialog-title"><p className="eyebrow">夜の途中ですが</p><h2 id="continue-dialog-title">最初の画面へ戻りますか？</h2><p>「戻る」を選ぶと、現在のプレイを終了して最初の画面へ戻ります。</p><p className="continue-dialog-warning">現在のスコアは破棄されます。</p><div><button type="button" className="continue-yes" onClick={() => setShowContinuePrompt(false)}>キャンセル</button><button type="button" className="continue-no" onClick={returnToTitle}>戻る</button></div></section></div>}
 
       {phase === "title" && (
         <section className="title-card" aria-labelledby="game-title">

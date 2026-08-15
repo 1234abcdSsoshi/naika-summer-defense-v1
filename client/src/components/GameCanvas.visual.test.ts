@@ -161,6 +161,9 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).toContain("戻る");
     expect(componentSource).toContain("onClick={returnToTitle}");
     expect(componentSource).toContain("現在のプレイを終了して最初の画面へ戻ります");
+    expect(componentSource).toContain('className="continue-dialog-warning"');
+    expect(componentSource).toContain("現在のスコアは破棄されます。");
+    expect(styleSource).toContain(".continue-dialog .continue-dialog-warning");
     expect(sceneSource).toContain("abandonRun: () => void");
     expect(sceneSource).toContain('abandonRun = () =>');
     expect(sceneSource).toContain('this.callbacks.onPhase("title")');
