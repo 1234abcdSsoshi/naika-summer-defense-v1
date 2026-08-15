@@ -16,7 +16,7 @@ const DEFENSE_ATLAS = "/manus-storage/naika-3d-defense-atlas_d5b41c2f.png";
 const KOBAN_ASSET = "/manus-storage/naika-3d-koban-true-alpha_76e66136.png";
 const INSECT_ATLAS = "/manus-storage/naika-3d-insect-atlas_425b7f3c.png";
 const SLEEPER_ASSET = "/manus-storage/naika-sleeper-middle-aged-man-upperbody-states-clean_49502447.png";
-const PILLOW_ASSET = "/manus-storage/naika-sleeper-japanese-pillow-transparent-final_e015141a.png";
+const PILLOW_ASSET = "/manus-storage/naika-sleeper-japanese-pillow-horizontal_e5543254.png";
 const PLACEMENT_RANGE: Record<ItemId, number> = { incense: 1.5, cat: 2.25, frog: 2, daruma: 2.25 };
 
 type SleeperState = "rested" | "bitten" | "distressed" | "awake";
