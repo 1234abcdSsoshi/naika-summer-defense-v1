@@ -169,6 +169,7 @@ describe("蚊と小判の描画仕様", () => {
     expect(sceneSource).toContain('this.callbacks.onPhase("title")');
     expect(styleSource).toContain(".continue-dialog-backdrop");
     expect(styleSource).toContain(".brand-menu-button");
+    expect(styleSource).toContain(".brand-menu-button { pointer-events: auto;");
   });
 
   it("連続撃破のHUDバッジと連続数を含む通知を表示せず、内部スコア補正は維持する", () => {
