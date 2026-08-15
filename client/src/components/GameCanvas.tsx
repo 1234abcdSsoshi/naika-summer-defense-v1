@@ -16,6 +16,7 @@ const DEFENSE_ATLAS = "/manus-storage/naika-3d-defense-atlas_d5b41c2f.png";
 const KOBAN_ASSET = "/manus-storage/naika-3d-koban-true-alpha_76e66136.png";
 const INSECT_ATLAS = "/manus-storage/naika-3d-insect-atlas_425b7f3c.png";
 const SLEEPER_ASSET = "/manus-storage/naika-sleeper-middle-aged-man-upperbody-states-clean_49502447.png";
+const PILLOW_ASSET = "/manus-storage/naika-sleeper-japanese-pillow_242d7c2c.png";
 const PLACEMENT_RANGE: Record<ItemId, number> = { incense: 1.5, cat: 2.25, frog: 2, daruma: 2.25 };
 
 type SleeperState = "rested" | "bitten" | "distressed" | "awake";
@@ -254,7 +255,7 @@ export default function GameCanvas() {
         </div>
       )}
 
-      {phase === "playing" && <div className={`game-sleeper-anchor sleeper-state-${sleeperState}`} data-sleeper-state={sleeperState} role="img" aria-label={`中年男性：${sleeperStatusCopy[sleeperState]}`} style={{ "--sleeper-asset": `url(${SLEEPER_ASSET})` } as CSSProperties}><span className="sleeper-sprite" /><span className="sleeper-bite sleeper-bite-one" /><span className="sleeper-bite sleeper-bite-two" /><span className="sleeper-bite sleeper-bite-three" /><span className="sleeper-bite sleeper-bite-four" /><span className="sleeper-bite sleeper-bite-five" /><span className="sleeper-worry-lines" aria-hidden="true" /><small>{sleeperStatusCopy[sleeperState]}</small></div>}
+      {phase === "playing" && <div className={`game-sleeper-anchor sleeper-state-${sleeperState}`} data-sleeper-state={sleeperState} role="img" aria-label={`中年男性：${sleeperStatusCopy[sleeperState]}`} style={{ "--sleeper-asset": `url(${SLEEPER_ASSET})`, "--pillow-asset": `url(${PILLOW_ASSET})` } as CSSProperties}><span className="sleeper-pillow" aria-hidden="true" /><span className="sleeper-sprite" /><span className="sleeper-bite sleeper-bite-one" /><span className="sleeper-bite sleeper-bite-two" /><span className="sleeper-bite sleeper-bite-three" /><span className="sleeper-bite sleeper-bite-four" /><span className="sleeper-bite sleeper-bite-five" /><span className="sleeper-worry-lines" aria-hidden="true" /><small>{sleeperStatusCopy[sleeperState]}</small></div>}
 
       {phase === "playing" && (
         <nav className="item-tray" aria-label="防衛道具">
@@ -287,11 +288,11 @@ export default function GameCanvas() {
         </section>
       )}
 
-      {(gameOverPreview || isGameOverWaking) && <div className="gameover-wake-overlay" role="status" aria-live="assertive"><div className="gameover-wake-character" style={{ "--sleeper-asset": `url(${SLEEPER_ASSET})` } as CSSProperties}><span className="sleeper-sprite" /></div><p>びくっ！　目を覚ました。</p></div>}
+      {(gameOverPreview || isGameOverWaking) && <div className="gameover-wake-overlay" role="status" aria-live="assertive"><div className="gameover-wake-character" style={{ "--sleeper-asset": `url(${SLEEPER_ASSET})`, "--pillow-asset": `url(${PILLOW_ASSET})` } as CSSProperties}><span className="sleeper-sprite" /></div><p>びくっ！　目を覚ました。</p></div>}
 
       {phase === "result" && !gameOverPreview && (
         <section className="result-card" aria-live="assertive">
-          <div className="result-sleeper" style={{ "--sleeper-asset": `url(${SLEEPER_ASSET})` } as CSSProperties}><span className="sleeper-sprite" /></div>
+          <div className="result-sleeper" style={{ "--sleeper-asset": `url(${SLEEPER_ASSET})`, "--pillow-asset": `url(${PILLOW_ASSET})` } as CSSProperties}><span className="sleeper-sprite" /></div>
           <p className="eyebrow">蚊に起こされた夜の記録</p>
           <h2>目を覚ましてしまった。</h2>
           <div className="result-score"><span>得点</span><strong>{result.score.toLocaleString()}</strong></div>
