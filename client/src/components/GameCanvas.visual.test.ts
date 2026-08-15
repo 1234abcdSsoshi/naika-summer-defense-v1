@@ -52,8 +52,9 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain(".settings-control");
     expect(styleSource).toContain(".settings-button");
     expect(styleSource).toContain(".settings-panel");
-    expect(styleSource).toContain("top: max(60px, calc(env(safe-area-inset-top) + 46px))");
-    expect(styleSource).toContain("top: max(56px, calc(env(safe-area-inset-top) + 42px))");
+    expect(styleSource).toContain("top: max(96px, calc(env(safe-area-inset-top) + 78px))");
+    expect(styleSource).toContain("top: max(92px, calc(env(safe-area-inset-top) + 74px))");
+    expect(styleSource).toContain("width: 30px; height: 30px");
   });
 
   it("蚊の出現時にカラン音を追加せず、カラン音を抑えたBGMを使う", () => {
@@ -61,6 +62,22 @@ describe("蚊と小判の描画仕様", () => {
     const mosquitoSpawn = sceneSource.match(/private spawnMosquito\(\)[\s\S]*?private updateMosquitoes/)?.[0] ?? "";
     expect(mosquitoSpawn).not.toContain("playTone");
     expect(sceneSource).toContain("startMosquitoBuzz(context)");
+  });
+
+  it("確認画面を開くとゲームを一時停止し、キャンセルで再開する", () => {
+    expect(componentSource).toContain("handleRef.current?.setPaused(true)");
+    expect(componentSource).toContain("handleRef.current?.setPaused(false)");
+    expect(componentSource).toContain("const openContinuePrompt");
+    expect(componentSource).toContain("const cancelReturnToTitle");
+    expect(sceneSource).toContain("setPaused: (paused: boolean) => void");
+    expect(sceneSource).toContain("if (!this.running || this.paused) return;");
+    expect(sceneSource).toContain("setPaused: world.setPaused");
+  });
+
+  it("縁側へ戻るとプレイBGMからタイトルBGMへ切り替わる", () => {
+    expect(componentSource).toContain('const TITLE_BGM = "/manus-storage/naika-engawa-title-bgm_bcb74aac.wav"');
+    expect(componentSource).toContain('src={phase === "title" ? TITLE_BGM : NIGHT_BGM}');
+    expect(componentSource).toContain("if (phase === \"title\") bgm.play().catch(() => undefined)");
   });
 
   it("確認専用画面では蚊と小判を同時に表示できる", () => {

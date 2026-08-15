@@ -12,6 +12,7 @@ import { getLocalEventSummary } from "@/game/telemetry";
 const BRAND_MARK = "/manus-storage/naika-mark_1621aaa0.png";
 const BACKGROUND = "/manus-storage/naika-room-background-full-moon_95c25e77.png";
 const NIGHT_BGM = "/manus-storage/naika-night-defense-loop-no-bell_33ace5a3.mp3";
+const TITLE_BGM = "/manus-storage/naika-engawa-title-bgm_bcb74aac.wav";
 const DEFENSE_ATLAS = "/manus-storage/naika-3d-defense-atlas_d5b41c2f.png";
 const KOBAN_ASSET = "/manus-storage/naika-3d-koban-true-alpha_76e66136.png";
 const INSECT_ATLAS = "/manus-storage/naika-3d-insect-atlas_425b7f3c.png";
@@ -154,6 +155,15 @@ export default function GameCanvas() {
     };
   }, []);
 
+  useEffect(() => {
+    const bgm = bgmRef.current;
+    if (!bgm) return;
+    bgm.pause();
+    bgm.currentTime = 0;
+    bgm.volume = audioSettings.bgm;
+    if (phase === "title") bgm.play().catch(() => undefined);
+  }, [phase]);
+
   const start = () => {
     setShowContinuePrompt(false);
     setShowAudioSettings(false);
@@ -197,13 +207,17 @@ export default function GameCanvas() {
     setDifficulty(nextDifficulty);
     handleRef.current?.setDifficulty(nextDifficulty);
   };
+  const openContinuePrompt = () => {
+    handleRef.current?.setPaused(true);
+    setShowContinuePrompt(true);
+  };
+  const cancelReturnToTitle = () => {
+    handleRef.current?.setPaused(false);
+    setShowContinuePrompt(false);
+  };
   const returnToTitle = () => {
+    setShowContinuePrompt(false);
     handleRef.current?.abandonRun();
-    const bgm = bgmRef.current;
-    if (bgm) {
-      bgm.pause();
-      bgm.currentTime = 0;
-    }
     setPhase("title");
   };
   const exitToStageSelection = () => {
@@ -213,7 +227,7 @@ export default function GameCanvas() {
 
   return (
     <main className="night-shell" style={{ backgroundImage: `linear-gradient(rgba(10, 24, 45, .35), rgba(10, 24, 45, .72)), url(${BACKGROUND})` }}>
-      <audio ref={bgmRef} src={NIGHT_BGM} loop preload="auto" />
+      <audio ref={bgmRef} src={phase === "title" ? TITLE_BGM : NIGHT_BGM} loop preload="auto" />
       <canvas ref={canvasRef} onPointerMove={updatePlacementPreview} className="game-canvas" aria-label="内蚊のゲーム画面" style={{ touchAction: "none" }} />
       <div className="paper-grain" aria-hidden="true" />
       {phase !== "result" && <div className="settings-control"><button type="button" className="settings-button" aria-label="音量設定を開く" aria-expanded={showAudioSettings} onClick={() => setShowAudioSettings((open) => !open)}>⚙</button>{showAudioSettings && <aside className="settings-panel" aria-label="音量設定"><div className="settings-panel-title">音量設定</div><label><span>BGM</span><output>{Math.round(audioSettings.bgm * 100)}%</output><input type="range" min="0" max="1" step="0.01" value={audioSettings.bgm} onInput={(event) => updateAudioSetting("bgm", event.currentTarget.value)} aria-label="BGM音量" /></label><label><span>効果音</span><output>{Math.round(audioSettings.sfx * 100)}%</output><input type="range" min="0" max="1" step="0.01" value={audioSettings.sfx} onInput={(event) => updateAudioSetting("sfx", event.currentTarget.value)} aria-label="効果音音量" /></label></aside>}</div>}
@@ -245,7 +259,7 @@ export default function GameCanvas() {
       {phase !== "title" && (
         <div className="hud" aria-live="polite">
           <div className="hud-top">
-            <button type="button" className="brand-mini brand-menu-button" onClick={() => setShowContinuePrompt(true)} aria-label="最初の画面へ戻るか確認する"><img src={BRAND_MARK} alt="" /><span>内蚊</span></button>
+            <button type="button" className="brand-mini brand-menu-button" onClick={openContinuePrompt} aria-label="最初の画面へ戻るか確認する"><img src={BRAND_MARK} alt="" /><span>内蚊</span></button>
             <div className="score-cluster"><span>夜更けの得点</span><strong>{hud.score.toLocaleString()}</strong></div>
           </div>
           <div className="hud-readout">
@@ -274,7 +288,7 @@ export default function GameCanvas() {
         </nav>
       )}
 
-      {phase === "playing" && showContinuePrompt && <div className="continue-dialog-backdrop" role="presentation"><section className="continue-dialog" role="dialog" aria-modal="true" aria-labelledby="continue-dialog-title"><p className="eyebrow">夜の途中ですが</p><h2 id="continue-dialog-title">最初の画面へ戻りますか？</h2><p>「戻る」を選ぶと、現在のプレイを終了して最初の画面へ戻ります。</p><p className="continue-dialog-warning">現在のスコアは破棄されます。</p><div><button type="button" className="continue-yes" onClick={() => setShowContinuePrompt(false)}>キャンセル</button><button type="button" className="continue-no" onClick={returnToTitle}>戻る</button></div></section></div>}
+      {phase === "playing" && showContinuePrompt && <div className="continue-dialog-backdrop" role="presentation"><section className="continue-dialog" role="dialog" aria-modal="true" aria-labelledby="continue-dialog-title"><p className="eyebrow">夜の途中ですが</p><h2 id="continue-dialog-title">最初の画面へ戻りますか？</h2><p>「戻る」を選ぶと、現在のプレイを終了して最初の画面へ戻ります。</p><p className="continue-dialog-warning">現在のスコアは破棄されます。</p><div><button type="button" className="continue-yes" onClick={cancelReturnToTitle}>キャンセル</button><button type="button" className="continue-no" onClick={returnToTitle}>戻る</button></div></section></div>}
 
       {phase === "title" && (
         <section className="title-card" aria-labelledby="game-title">

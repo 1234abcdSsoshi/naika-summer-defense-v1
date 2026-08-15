@@ -74,6 +74,7 @@ export type GameHandle = {
   purchase: (item: ItemId) => void;
   setDifficulty: (difficulty: DifficultyId) => void;
   retry: () => void;
+  setPaused: (paused: boolean) => void;
   dispose: () => void;
 };
 
@@ -152,6 +153,7 @@ class GameWorld {
   private readonly playerY = -3.45;
   private now = 0;
   private running = false;
+  private paused = false;
   private placement: ItemId | null = null;
   private health = 100;
   private score = 0;
@@ -305,17 +307,24 @@ class GameWorld {
 
   retry = () => this.startRun();
 
+  setPaused = (paused: boolean) => {
+    if (!this.running) return;
+    this.paused = paused;
+    if (paused) this.stopMosquitoBuzz();
+  };
+
   abandonRun = () => {
     if (!this.running) return;
     this.running = false;
+    this.paused = false;
     this.placement = null;
     this.callbacks.onPhase("title");
   };
 
   update(delta: number) {
     const safeDelta = Math.min(delta, 0.05);
+    if (!this.running || this.paused) return;
     this.animatePlayer();
-    if (!this.running) return;
     this.now += safeDelta;
     this.currentThreat = getAdaptiveThreat(this.health, this.hits / Math.max(1, this.taps), this.now);
     this.threatSum += this.currentThreat;
@@ -430,6 +439,7 @@ class GameWorld {
     this.placed = [];
     this.vfxs = [];
     this.now = 0;
+    this.paused = false;
     this.health = 100;
     this.score = 0;
     this.coins = 4;
@@ -1157,6 +1167,7 @@ export async function createGameScene(engine: Engine, canvas: HTMLCanvasElement,
     purchase: world.purchase,
     setDifficulty: world.setDifficulty,
     retry: world.retry,
+    setPaused: world.setPaused,
     dispose: () => {
       canvas.removeEventListener("pointerdown", onPointerDown);
       world.dispose();
