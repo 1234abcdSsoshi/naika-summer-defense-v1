@@ -32,6 +32,19 @@ describe("蚊と小判の描画仕様", () => {
     expect(coinSpawn).toContain("root.setEnabled(false)");
   });
 
+  it("歯車設定からBGM音量を調整できる", () => {
+    expect(componentSource).toContain('className="settings-button"');
+    expect(componentSource).toContain('aria-label="音量設定を開く"');
+    expect(componentSource).toContain('aria-expanded={showAudioSettings}');
+    expect(componentSource).toContain('has("settings-check")');
+    expect(componentSource).toContain('className="settings-panel"');
+    expect(componentSource).toContain('aria-label="BGM音量"');
+    expect(componentSource).toContain('Math.round(audioSettings.bgm * 100)');
+    expect(styleSource).toContain(".settings-control");
+    expect(styleSource).toContain(".settings-button");
+    expect(styleSource).toContain(".settings-panel");
+  });
+
   it("蚊の出現時にカラン音を追加せず、カラン音を抑えたBGMを使う", () => {
     expect(componentSource).toContain('const NIGHT_BGM = "/manus-storage/naika-night-defense-loop-no-bell_33ace5a3.mp3"');
     const mosquitoSpawn = sceneSource.match(/private spawnMosquito\(\)[\s\S]*?private updateMosquitoes/)?.[0] ?? "";

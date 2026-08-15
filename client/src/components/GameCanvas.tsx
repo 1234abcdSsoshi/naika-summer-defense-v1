@@ -80,6 +80,7 @@ export default function GameCanvas() {
   const [lastItemActivation, setLastItemActivation] = useState<ItemActivationView | null>(null);
   const [placementPreview, setPlacementPreview] = useState<{ item: ItemId; x: number; y: number } | null>(null);
   const [showContinuePrompt, setShowContinuePrompt] = useState(false);
+  const [showAudioSettings, setShowAudioSettings] = useState(() => new URLSearchParams(window.location.search).has("settings-check"));
   const [isGameOverWaking, setIsGameOverWaking] = useState(false);
   const activationPreview = new URLSearchParams(window.location.search).has("activation-check");
   const sleeperPreview = new URLSearchParams(window.location.search).get("sleeper");
@@ -155,6 +156,7 @@ export default function GameCanvas() {
 
   const start = () => {
     setShowContinuePrompt(false);
+    setShowAudioSettings(false);
     setIsGameOverWaking(false);
     const bgm = bgmRef.current;
     if (bgm) {
@@ -214,7 +216,7 @@ export default function GameCanvas() {
       <audio ref={bgmRef} src={NIGHT_BGM} loop preload="auto" />
       <canvas ref={canvasRef} onPointerMove={updatePlacementPreview} className="game-canvas" aria-label="内蚊のゲーム画面" style={{ touchAction: "none" }} />
       <div className="paper-grain" aria-hidden="true" />
-      {phase !== "result" && <aside className="audio-dock" aria-label="音量調整"><div className="audio-dock-title">音量</div><label><span aria-hidden="true">♫</span><input type="range" min="0" max="1" step="0.01" value={audioSettings.bgm} onInput={(event) => updateAudioSetting("bgm", event.currentTarget.value)} aria-label="BGM音量" /><small>BGM</small></label><label><span aria-hidden="true">✦</span><input type="range" min="0" max="1" step="0.01" value={audioSettings.sfx} onInput={(event) => updateAudioSetting("sfx", event.currentTarget.value)} aria-label="効果音音量" /><small>効果音</small></label></aside>}
+      {phase !== "result" && <div className="settings-control"><button type="button" className="settings-button" aria-label="音量設定を開く" aria-expanded={showAudioSettings} onClick={() => setShowAudioSettings((open) => !open)}>⚙</button>{showAudioSettings && <aside className="settings-panel" aria-label="音量設定"><div className="settings-panel-title">音量設定</div><label><span>BGM</span><output>{Math.round(audioSettings.bgm * 100)}%</output><input type="range" min="0" max="1" step="0.01" value={audioSettings.bgm} onInput={(event) => updateAudioSetting("bgm", event.currentTarget.value)} aria-label="BGM音量" /></label><label><span>効果音</span><output>{Math.round(audioSettings.sfx * 100)}%</output><input type="range" min="0" max="1" step="0.01" value={audioSettings.sfx} onInput={(event) => updateAudioSetting("sfx", event.currentTarget.value)} aria-label="効果音音量" /></label></aside>}</div>}
       {phase === "playing" && <div className="enemy-dom-layer" aria-live="polite" aria-label={`接近中の蚊 ${mosquitoes.length}匹`}>{mosquitoes.map((mosquito) => <div key={mosquito.id} className={`enemy-dom enemy-dom-${mosquito.type}`} style={{ left: `${((mosquito.x + 4) / 8) * 100}%`, top: `${((7 - mosquito.y) / 14) * 100}%`, "--insect-atlas": `url(${INSECT_ATLAS})`, "--enemy-bank": `${mosquito.bank}deg`, "--enemy-scale": `${mosquito.scale}` } as CSSProperties}><span className="enemy-wing enemy-wing-left" /><span className="enemy-wing enemy-wing-right" /><span className="enemy-body" /><span className="enemy-legs" /></div>)}</div>}
       {phase === "playing" && <div className="koban-dom-layer" aria-live="polite" aria-label={`回収できる小判 ${kobans.length}枚`}>{kobans.map((koban) => <div key={koban.id} className="koban-dom" style={{ left: `${((koban.x + 4) / 8) * 100}%`, top: `${((7 - koban.y) / 14) * 100}%`, "--koban-asset": `url(${KOBAN_ASSET})` } as CSSProperties}><span>小判</span></div>)}</div>}
       {phase === "playing" && <div className="placed-item-dom-layer" aria-live="polite" aria-label={`設置中の防衛道具 ${placedItems.length}個`}>{placedItems.map((item) => {
