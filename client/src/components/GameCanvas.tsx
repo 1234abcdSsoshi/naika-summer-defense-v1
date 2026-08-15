@@ -243,7 +243,7 @@ export default function GameCanvas() {
       {phase !== "title" && (
         <div className="hud" aria-live="polite">
           <div className="hud-top">
-            <button type="button" className="brand-mini brand-menu-button" onClick={() => setShowContinuePrompt(true)} aria-label="ゲームを続けるか確認する"><img src={BRAND_MARK} alt="" /><span>内蚊</span></button>
+            <button type="button" className="brand-mini brand-menu-button" onClick={() => setShowContinuePrompt(true)} aria-label="最初の画面へ戻るか確認する"><img src={BRAND_MARK} alt="" /><span>内蚊</span></button>
             <div className="score-cluster"><span>夜更けの得点</span><strong>{hud.score.toLocaleString()}</strong></div>
           </div>
           <div className="hud-readout">
@@ -272,7 +272,7 @@ export default function GameCanvas() {
         </nav>
       )}
 
-      {phase === "playing" && showContinuePrompt && <div className="continue-dialog-backdrop" role="presentation"><section className="continue-dialog" role="dialog" aria-modal="true" aria-labelledby="continue-dialog-title"><p className="eyebrow">夜の途中ですが</p><h2 id="continue-dialog-title">ゲームを続けますか？</h2><p>「いいえ」を選ぶと、難易度を選べるステージ選択画面へ戻ります。</p><div><button type="button" className="continue-yes" onClick={() => setShowContinuePrompt(false)}>はい、続ける</button><button type="button" className="continue-no" onClick={exitToStageSelection}>いいえ</button></div></section></div>}
+      {phase === "playing" && showContinuePrompt && <div className="continue-dialog-backdrop" role="presentation"><section className="continue-dialog" role="dialog" aria-modal="true" aria-labelledby="continue-dialog-title"><p className="eyebrow">夜の途中ですが</p><h2 id="continue-dialog-title">最初の画面へ戻りますか？</h2><p>「戻る」を選ぶと、現在のプレイを終了して最初の画面へ戻ります。</p><div><button type="button" className="continue-yes" onClick={() => setShowContinuePrompt(false)}>キャンセル</button><button type="button" className="continue-no" onClick={returnToTitle}>戻る</button></div></section></div>}
 
       {phase === "title" && (
         <section className="title-card" aria-labelledby="game-title">

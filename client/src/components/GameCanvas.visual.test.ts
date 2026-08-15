@@ -154,11 +154,13 @@ describe("蚊と小判の描画仕様", () => {
 
   it("内蚊アイコンは継続確認を開き、いいえでステージ選択へ戻れる", () => {
     expect(componentSource).toContain('className="brand-mini brand-menu-button"');
+    expect(componentSource).toContain("最初の画面へ戻るか確認する");
     expect(componentSource).toContain("setShowContinuePrompt(true)");
-    expect(componentSource).toContain("ゲームを続けますか？");
-    expect(componentSource).toContain("はい、続ける");
-    expect(componentSource).toContain("exitToStageSelection");
-    expect(componentSource).toContain("難易度を選べるステージ選択画面へ戻ります");
+    expect(componentSource).toContain("最初の画面へ戻りますか？");
+    expect(componentSource).toContain("キャンセル");
+    expect(componentSource).toContain("戻る");
+    expect(componentSource).toContain("onClick={returnToTitle}");
+    expect(componentSource).toContain("現在のプレイを終了して最初の画面へ戻ります");
     expect(sceneSource).toContain("abandonRun: () => void");
     expect(sceneSource).toContain('abandonRun = () =>');
     expect(sceneSource).toContain('this.callbacks.onPhase("title")');
