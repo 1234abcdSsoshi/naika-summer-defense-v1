@@ -220,7 +220,7 @@ button { font: inherit; }
 .hud-top { display: flex; justify-content: space-between; align-items: flex-start; }
 .brand-mini { display: flex; align-items: center; gap: 7px; color: #f2ebdd; font-family: "Zen Old Mincho", serif; letter-spacing: .12em; font-weight: 700; font-size: 14px; text-shadow: 0 1px 8px rgba(0,0,0,.55); }
 .brand-mini img { width: 30px; height: 30px; object-fit: contain; }
-.brand-menu-button { pointer-events: auto; padding: 0; border: 0; background: transparent; transition: transform .16s cubic-bezier(.23,1,.32,1), filter .16s ease; }.brand-menu-button:active { transform: scale(.96); }.brand-menu-button:hover { filter: brightness(1.12); }
+.brand-menu-button { position: relative; pointer-events: auto; padding: 0; border: 0; background: transparent; transition: transform .16s cubic-bezier(.23,1,.32,1), filter .16s ease; }.brand-menu-button::before { content: ""; position: absolute; z-index: -1; inset: -8px; } .brand-menu-button:active { transform: scale(.96); }.brand-menu-button:hover { filter: brightness(1.12); }
 .score-cluster { text-align: right; color: #f2ebdd; text-shadow: 0 1px 8px rgba(0,0,0,.65); }
 .score-cluster span { display: block; font-size: 10px; letter-spacing: .12em; opacity: .8; }
 .score-cluster strong { font-family: "Zen Old Mincho", serif; font-size: clamp(23px, 6vw, 34px); line-height: 1; font-variant-numeric: tabular-nums; }
