@@ -32,6 +32,13 @@ describe("蚊と小判の描画仕様", () => {
     expect(coinSpawn).toContain("root.setEnabled(false)");
   });
 
+  it("蚊の出現時にカラン音を追加せず、カラン音を抑えたBGMを使う", () => {
+    expect(componentSource).toContain('const NIGHT_BGM = "/manus-storage/naika-night-defense-loop-no-bell_33ace5a3.mp3"');
+    const mosquitoSpawn = sceneSource.match(/private spawnMosquito\(\)[\s\S]*?private updateMosquitoes/)?.[0] ?? "";
+    expect(mosquitoSpawn).not.toContain("playTone");
+    expect(sceneSource).toContain("startMosquitoBuzz(context)");
+  });
+
   it("確認専用画面では蚊と小判を同時に表示できる", () => {
     expect(sceneSource).toContain('private readonly visualCheck = new URLSearchParams(window.location.search).has("visual-check")');
     const startRun = sceneSource.match(/startRun = \(\) => \{[\s\S]*?this\.callbacks\.onPhase\("playing"\)/)?.[0] ?? "";

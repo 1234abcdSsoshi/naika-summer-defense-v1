@@ -11,7 +11,7 @@ import { getLocalEventSummary } from "@/game/telemetry";
 
 const BRAND_MARK = "/manus-storage/naika-mark_1621aaa0.png";
 const BACKGROUND = "/manus-storage/naika-room-background_d0c50701.png";
-const NIGHT_BGM = "/manus-storage/naika-night-defense-loop_0b454f3f.mp3";
+const NIGHT_BGM = "/manus-storage/naika-night-defense-loop-no-bell_33ace5a3.mp3";
 const DEFENSE_ATLAS = "/manus-storage/naika-3d-defense-atlas_d5b41c2f.png";
 const KOBAN_ASSET = "/manus-storage/naika-3d-koban-true-alpha_76e66136.png";
 const INSECT_ATLAS = "/manus-storage/naika-3d-insect-atlas_425b7f3c.png";
