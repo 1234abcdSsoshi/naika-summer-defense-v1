@@ -10,7 +10,7 @@ import { DIFFICULTY_PROFILES, type DifficultyId } from "@/game/difficulty";
 import { getLocalEventSummary } from "@/game/telemetry";
 
 const BRAND_MARK = "/manus-storage/naika-mark_1621aaa0.png";
-const BACKGROUND = "/manus-storage/naika-room-background_d0c50701.png";
+const BACKGROUND = "/manus-storage/naika-room-background-full-moon_95c25e77.png";
 const NIGHT_BGM = "/manus-storage/naika-night-defense-loop-no-bell_33ace5a3.mp3";
 const DEFENSE_ATLAS = "/manus-storage/naika-3d-defense-atlas_d5b41c2f.png";
 const KOBAN_ASSET = "/manus-storage/naika-3d-koban-true-alpha_76e66136.png";
@@ -240,7 +240,7 @@ export default function GameCanvas() {
           </div>
         ))}
       </div>}
-      {phase === "title" && <div className="title-world-signals" aria-hidden="true"><span className="moon-disc" /><span className="lantern-ring ring-one" /><span className="lantern-ring ring-two" /><span className="mosquito-shape mosquito-one" /><span className="mosquito-shape mosquito-two" /><div className="sleeping-band"><i /><i /><i /></div></div>}
+      {phase === "title" && <div className="title-world-signals" aria-hidden="true"><span className="lantern-ring ring-one" /><span className="lantern-ring ring-two" /><span className="mosquito-shape mosquito-one" /><span className="mosquito-shape mosquito-two" /><div className="sleeping-band"><i /><i /><i /></div></div>}
 
       {phase !== "title" && (
         <div className="hud" aria-live="polite">

@@ -32,6 +32,15 @@ describe("蚊と小判の描画仕様", () => {
     expect(coinSpawn).toContain("root.setEnabled(false)");
   });
 
+  it("満月版の和室背景アセットを使用する", () => {
+    expect(componentSource).toContain('const BACKGROUND = "/manus-storage/naika-room-background-full-moon_95c25e77.png"');
+    expect(componentSource).not.toContain('const BACKGROUND = "/manus-storage/naika-room-background_d0c50701.png"');
+    expect(sceneSource).toContain('const ROOM_BACKGROUND = "/manus-storage/naika-room-background-full-moon_95c25e77.png"');
+    expect(sceneSource).not.toContain('const ROOM_BACKGROUND = "/manus-storage/naika-room-background_d0c50701.png"');
+    expect(componentSource).not.toContain('className="moon-disc"');
+    expect(styleSource).not.toContain('.moon-disc {');
+  });
+
   it("歯車設定からBGM音量を調整できる", () => {
     expect(componentSource).toContain('className="settings-button"');
     expect(componentSource).toContain('aria-label="音量設定を開く"');

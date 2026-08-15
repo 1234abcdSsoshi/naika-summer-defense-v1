@@ -23,7 +23,7 @@ import "@babylonjs/core/Shaders/standard.fragment";
 import { DIFFICULTY_PROFILES, getAdaptiveThreat, type DifficultyId } from "./difficulty";
 import { GameplayTelemetry, type RunAnalytics } from "./telemetry";
 
-const ROOM_BACKGROUND = "/manus-storage/naika-room-background_d0c50701.png";
+const ROOM_BACKGROUND = "/manus-storage/naika-room-background-full-moon_95c25e77.png";
 const ENEMY_SPRITES: Record<MosquitoType, string> = {
   small: "/manus-storage/naika-mosquito-small-sprite_af4952dd.png",
   fast: "/manus-storage/naika-mosquito-fast-sprite_f65f8e38.png",
