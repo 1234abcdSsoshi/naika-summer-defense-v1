@@ -227,9 +227,7 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain('width: min(190px, 50vw); height: min(190px, 50vw);');
     expect(styleSource).toContain('background: var(--sleeper-asset) center / 200% 200% no-repeat');
     expect(styleSource).toContain('.game-sleeper-anchor .sleeper-pillow');
-    expect(styleSource).toContain('background-image: var(--pillow-asset);');
-    expect(styleSource).toContain('background-color: #f7f4eb;');
-    expect(styleSource).toContain('width: min(190px, 52vw); height: min(78px, 22vw);');
+    expect(styleSource).toContain('background: var(--pillow-asset) center / contain no-repeat');
     expect(styleSource).toContain('bottom: 71px;');
   });
 });
