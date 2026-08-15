@@ -43,6 +43,8 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain(".settings-control");
     expect(styleSource).toContain(".settings-button");
     expect(styleSource).toContain(".settings-panel");
+    expect(styleSource).toContain("top: max(60px, calc(env(safe-area-inset-top) + 46px))");
+    expect(styleSource).toContain("top: max(56px, calc(env(safe-area-inset-top) + 42px))");
   });
 
   it("蚊の出現時にカラン音を追加せず、カラン音を抑えたBGMを使う", () => {
