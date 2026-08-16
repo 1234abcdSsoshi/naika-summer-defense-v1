@@ -31,8 +31,8 @@ const ENEMY_SPRITES: Record<MosquitoType, string> = {
 };
 const ITEM_ATLAS = "/manus-storage/naika-defense-items-atlas_4c991078.png";
 const VFX_ATLAS = "/manus-storage/naika-woodblock-vfx-atlas_9cc67c3a.png";
-const KOBAN_COLLECT_SFX = "/manus-storage/naika-koban-collect_c76439e0.mp3";
-const ITEM_PLACE_SFX = "/manus-storage/naika-item-place_c23e24d7.mp3";
+const KOBAN_COLLECT_SFX = "/manus-storage/naika-koban-collect-new_3c7bc16a.wav";
+const ITEM_PLACE_SFX = "/manus-storage/naika-item-place-new_d32bae7d.wav";
 
 export type ItemId = "incense" | "cat" | "frog" | "daruma";
 type MosquitoType = "small" | "fast" | "sturdy";
@@ -396,7 +396,7 @@ class GameWorld {
       .filter((entry) => entry.state !== "falling" && distance(entry.x, entry.y, x, y) < 0.45)
       .sort((a, b) => distance(a.x, a.y, 0, this.playerY) - distance(b.x, b.y, 0, this.playerY))[0];
     if (mosquito) this.hitMosquito(mosquito);
-    else this.playTone(140, 0.035, "sine", 0.025);
+    else this.playTone(220, 0.58, "triangle", 0.035);
   };
 
   purchase = (item: ItemId) => {
@@ -404,7 +404,7 @@ class GameWorld {
     const info = ITEM_INFO[item];
     if (this.coins < info.price) {
       this.emitHud(`${info.label}にはあと${info.price - this.coins}枚必要`);
-      this.playTone(140, 0.06, "sine", 0.025);
+      this.playTone(165, 0.62, "square", 0.035);
       return;
     }
     if (this.placed.some((entry) => entry.id === item)) {
@@ -414,7 +414,7 @@ class GameWorld {
     this.coins -= info.price;
     this.placement = item;
     this.emitHud(`${info.label}を選択。畳をタップして置く`);
-    this.playTone(520, 0.07, "triangle", 0.06);
+    this.playTone(740, 0.56, "sine", 0.055);
   };
 
   dispose = () => {
@@ -494,6 +494,7 @@ class GameWorld {
     root.setEnabled(false);
     this.mosquitoes.push({ id: this.mosquitoId++, type, hp: info.hp, state: "approaching", x, y, vx: 0, vy: 0, speed: info.speed, biteAt: 0, fallingFor: 0, capturedFor: 0, captureOriginX: x, captureOriginY: y, captureTargetX: x, captureTargetY: y, mesh: root });
     this.emitMosquitoViews(true);
+    this.playTone(330, 0.68, "sine", 0.035);
     this.telemetry.track("enemy_spawned", { type, stage, threat: Number(this.currentThreat.toFixed(2)), difficulty: this.difficulty });
   }
 
@@ -732,7 +733,7 @@ class GameWorld {
     this.telemetry.track("tap_hit", { type: mosquito.type, hpRemaining: mosquito.hp });
     mosquito.mesh.scaling.setAll(1.34);
     window.setTimeout(() => mosquito.mesh.scaling.setAll(1), 90);
-    this.playTone(660, 0.055, "square", 0.045);
+    this.playTone(880, 0.52, "triangle", 0.05);
     navigator.vibrate?.(12);
     if (mosquito.hp <= 0) this.killMosquito(mosquito, true);
     else this.emitHud("しぶとい蚊。もう一度！");
@@ -763,7 +764,7 @@ class GameWorld {
     this.telemetry.track("damage_taken", { damage: adjustedDamage, health: this.health, difficulty: this.difficulty });
     this.playerRoot.scaling.x = Math.max(0.65, this.health / 100);
     this.playerRoot.scaling.y = 0.86 + this.health / 800;
-    this.playTone(185, 0.12, "sawtooth", 0.06);
+    this.playTone(110, 0.74, "triangle", 0.055);
     navigator.vibrate?.([18, 24, 18]);
     this.emitHud(this.health <= 0 ? "蚊に起こされてしまった…" : "寝息が細くなっている…");
     if (this.health <= 0) this.endRun();
@@ -1048,7 +1049,6 @@ class GameWorld {
     const context = this.getAudioContext();
     if (!context) return;
     context.resume().catch(() => undefined);
-    this.startMosquitoBuzz(context);
   }
 
   private playTone(frequency: number, duration: number, type: OscillatorType, volume: number) {

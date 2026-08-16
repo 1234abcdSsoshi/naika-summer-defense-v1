@@ -60,8 +60,10 @@ describe("蚊と小判の描画仕様", () => {
   it("蚊の出現時にカラン音を追加せず、カラン音を抑えたBGMを使う", () => {
     expect(componentSource).toContain('const NIGHT_BGM = "/manus-storage/naika-night-defense-loop-no-bell_33ace5a3.mp3"');
     const mosquitoSpawn = sceneSource.match(/private spawnMosquito\(\)[\s\S]*?private updateMosquitoes/)?.[0] ?? "";
-    expect(mosquitoSpawn).not.toContain("playTone");
-    expect(sceneSource).toContain("startMosquitoBuzz(context)");
+    expect(mosquitoSpawn).toContain('this.playTone(330, 0.68, "sine", 0.035)');
+    expect(sceneSource).not.toContain("startMosquitoBuzz(context)");
+    expect(sceneSource).toContain('const KOBAN_COLLECT_SFX = "/manus-storage/naika-koban-collect-new_3c7bc16a.wav"');
+    expect(sceneSource).toContain('const ITEM_PLACE_SFX = "/manus-storage/naika-item-place-new_d32bae7d.wav"');
   });
 
   it("確認画面を開くとゲームを一時停止し、キャンセルで再開する", () => {
@@ -285,6 +287,18 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain('background: var(--pillow-asset) center / contain no-repeat');
     expect(styleSource).toContain('bottom: 71px;');
     expect(styleSource).toContain('transform: translateX(-50%) rotate(0deg);');
+  });
+
+  it("効果音はすべて短尺の別音源へ置き換える", () => {
+    expect(sceneSource).toContain('this.playTone(220, 0.58, "triangle", 0.035)');
+    expect(sceneSource).toContain('this.playTone(165, 0.62, "square", 0.035)');
+    expect(sceneSource).toContain('this.playTone(740, 0.56, "sine", 0.055)');
+    expect(sceneSource).toContain('this.playTone(880, 0.52, "triangle", 0.05)');
+    expect(sceneSource).toContain('this.playTone(110, 0.74, "triangle", 0.055)');
+    expect(sceneSource).toContain('naika-koban-collect-new_3c7bc16a.wav');
+    expect(sceneSource).toContain('naika-item-place-new_d32bae7d.wav');
+    expect(sceneSource).not.toContain('naika-koban-collect_c76439e0.mp3');
+    expect(sceneSource).not.toContain('naika-item-place_c23e24d7.mp3');
   });
 
   it("中年男性は頭と肩だけのコンパクト表示にする", () => {
