@@ -1072,7 +1072,12 @@ class GameWorld {
       const effect = source.cloneNode(true) as HTMLAudioElement;
       effect.volume = volume * this.sfxVolume;
       effect.preload = "auto";
-      void effect.play().catch(() => undefined);
+      void effect.play().then(() => {
+        window.setTimeout(() => {
+          effect.pause();
+          effect.currentTime = 0;
+        }, 1000);
+      }).catch(() => undefined);
     } catch { /* Sound effects are enhancements only. */ }
   }
 
