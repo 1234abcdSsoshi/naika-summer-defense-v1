@@ -279,7 +279,7 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain('.sleeper-state-distressed .sleeper-bite');
     expect(styleSource).toContain('.gameover-wake-overlay');
     expect(styleSource).toContain('bottom: 94px; left: 12%;');
-    expect(styleSource).toContain('width: min(285px, 75vw); height: min(285px, 75vw);');
+    expect(styleSource).toContain('width: min(174px, 46vw); height: min(174px, 46vw);');
     expect(styleSource).toContain('background: var(--sleeper-asset) center / 200% 200% no-repeat');
     expect(styleSource).toContain('.game-sleeper-anchor .sleeper-pillow');
     expect(styleSource).toContain('background: var(--pillow-asset) center / contain no-repeat');
@@ -287,11 +287,18 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain('transform: translateX(-50%) rotate(0deg);');
   });
 
+  it("中年男性は頭と肩だけのコンパクト表示にする", () => {
+    expect(styleSource).toContain("width: min(174px, 46vw); height: min(174px, 46vw);");
+    expect(styleSource).toContain("bottom: -6px;");
+    expect(styleSource).toContain("width: min(122px, 32vw); height: min(50px, 13vw);");
+  });
+
   it("フィールド上のキャラクターを1.5倍で表示する", () => {
     expect(styleSource).toContain("scale(calc(var(--enemy-scale) * 1.5))");
     expect(styleSource).toContain("transform: translate(-50%, -50%) scale(1.5);");
-    expect(styleSource).toContain("width: min(285px, 75vw); height: min(285px, 75vw);");
-    expect(styleSource).toContain("width: min(465px, 126vw); height: min(465px, 126vw);");
-    expect(styleSource).toContain("width: 147px; height: 147px;");
+    expect(styleSource).toContain("width: min(174px, 46vw); height: min(174px, 46vw);");
+    expect(styleSource).toContain("width: min(280px, 76vw); height: min(280px, 76vw);");
+    expect(styleSource).toContain("width: 105px; height: 105px;");
+    expect(styleSource).toContain("bottom: -6px;");
   });
 });
