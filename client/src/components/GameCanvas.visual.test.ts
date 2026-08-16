@@ -6,6 +6,7 @@ const projectRoot = resolve(import.meta.dirname, "../../..");
 const componentSource = readFileSync(resolve(projectRoot, "client/src/components/GameCanvas.tsx"), "utf8");
 const styleSource = readFileSync(resolve(projectRoot, "client/src/index.css"), "utf8");
 const sceneSource = readFileSync(resolve(projectRoot, "client/src/game/scene.ts"), "utf8");
+const stageSource = readFileSync(resolve(projectRoot, "client/src/game/stage.ts"), "utf8");
 
 describe("蚊と小判の描画仕様", () => {
   it("小判上の丸いハイライト要素を描画しない", () => {
@@ -32,11 +33,17 @@ describe("蚊と小判の描画仕様", () => {
     expect(coinSpawn).toContain("root.setEnabled(false)");
   });
 
-  it("満月版の和室背景アセットを使用する", () => {
-    expect(componentSource).toContain('const BACKGROUND = "/manus-storage/naika-room-background-full-moon_95c25e77.png"');
-    expect(componentSource).not.toContain('const BACKGROUND = "/manus-storage/naika-room-background_d0c50701.png"');
-    expect(sceneSource).toContain('const ROOM_BACKGROUND = "/manus-storage/naika-room-background-full-moon_95c25e77.png"');
-    expect(sceneSource).not.toContain('const ROOM_BACKGROUND = "/manus-storage/naika-room-background_d0c50701.png"');
+  it("朝・夕暮れ・夜の3ステージ固有背景を使用し、夜は満月版を維持する", () => {
+    expect(stageSource).toContain('export type StageId = "morning" | "dusk" | "night"');
+    expect(stageSource).toContain('morning: {');
+    expect(stageSource).toContain('dusk: {');
+    expect(stageSource).toContain('night: {');
+    expect(stageSource).toContain('/manus-storage/naika-room-background-morning_61f9fe46.png');
+    expect(stageSource).toContain('/manus-storage/naika-room-background-dusk_2b5c1a6f.png');
+    expect(stageSource).toContain('/manus-storage/naika-room-background-full-moon_95c25e77.png');
+    expect(componentSource).toContain('const stage = STAGE_PRESENTATIONS[difficulty]');
+    expect(componentSource).toContain('url(${stage.background})');
+    expect(sceneSource).toContain('STAGE_PRESENTATIONS.night.background');
     expect(componentSource).not.toContain('className="moon-disc"');
     expect(styleSource).not.toContain('.moon-disc {');
   });
@@ -58,8 +65,8 @@ describe("蚊と小判の描画仕様", () => {
   });
 
   it("蚊の出現時にカラン音を追加せず、カラン音を抑えたBGMを使う", () => {
-    expect(componentSource).toContain('const NIGHT_BGM = "/manus-storage/naika-night-defense-loop-no-bell_33ace5a3.mp3"');
-    const mosquitoSpawn = sceneSource.match(/private spawnMosquito\(\)[\s\S]*?private updateMosquitoes/)?.[0] ?? "";
+    expect(stageSource).toContain('/manus-storage/naika-night-defense-loop-no-bell_33ace5a3.mp3');
+    const mosquitoSpawn = sceneSource.match(/private spawnMosquito\(\)[\s\S]*?private spawnBeneficial/)?.[0] ?? "";
     expect(mosquitoSpawn).not.toContain("playTone");
     expect(sceneSource).toContain("startMosquitoBuzz(context)");
     expect(sceneSource).toContain('const KOBAN_COLLECT_SFX = "/manus-storage/naika-koban-collect_c76439e0.mp3"');
@@ -82,8 +89,32 @@ describe("蚊と小判の描画仕様", () => {
 
   it("縁側へ戻るとプレイBGMからタイトルBGMへ切り替わる", () => {
     expect(componentSource).toContain('const TITLE_BGM = "/manus-storage/naika-engawa-title-bgm_bcb74aac.wav"');
-    expect(componentSource).toContain('src={phase === "title" ? TITLE_BGM : NIGHT_BGM}');
+    expect(componentSource).toContain('src={phase === "title" ? TITLE_BGM : stage.gameplayBgm}');
     expect(componentSource).toContain("if (phase === \"title\") bgm.play().catch(() => undefined)");
+  });
+
+  it("益虫を捕獲してスキルを蓄積し、ステージ固有の像モチーフで全蚊を撃破する", () => {
+    expect(stageSource).toContain('cicada: 0');
+    expect(stageSource).toContain('firefly: 1');
+    expect(stageSource).toContain('moth: 2');
+    expect(stageSource).toContain('buddha: 0');
+    expect(stageSource).toContain('fujin: 1');
+    expect(stageSource).toContain('raijin: 2');
+    expect(sceneSource).toContain('onBeneficials: (beneficials: BeneficialView[]) => void');
+    expect(sceneSource).toContain('onSkill: (skill: SkillView) => void');
+    expect(sceneSource).toContain('private spawnBeneficial()');
+    expect(sceneSource).toContain('this.skillCharge = Math.min(1, this.skillCharge + 0.24)');
+    expect(sceneSource).toContain('this.skillCharge = Math.min(1, this.skillCharge + safeDelta / 60)');
+    expect(sceneSource).toContain('activateSkill = () =>');
+    expect(sceneSource).toContain('this.killMosquito(mosquito, false, "skill")');
+    expect(componentSource).toContain('onBeneficials: setBeneficials');
+    expect(componentSource).toContain('onSkill: setSkill');
+    expect(componentSource).toContain('className={`beneficial-dom beneficial-${beneficial.type}`}');
+    expect(componentSource).toContain('className={`skill-core ${skill.ready ? "is-ready" : ""}');
+    expect(componentSource).toContain('handleRef.current?.activateSkill()');
+    expect(styleSource).toContain('.beneficial-dom-layer');
+    expect(styleSource).toContain('.skill-core');
+    expect(styleSource).toContain('.skill-hands');
   });
 
   it("確認専用画面では蚊と小判を同時に表示できる", () => {

@@ -5,19 +5,21 @@
  */
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { Engine } from "@babylonjs/core/Engines/engine";
-import { createGameScene, type FrogTongueView, type GameHandle, type HudState, type ItemActivationView, type ItemId, type KobanView, type MosquitoView, type PlacedItemView, type ResultState } from "@/game/scene";
+import { createGameScene, type BeneficialView, type FrogTongueView, type GameHandle, type HudState, type ItemActivationView, type ItemId, type KobanView, type MosquitoView, type PlacedItemView, type ResultState, type SkillView } from "@/game/scene";
 import { DIFFICULTY_PROFILES, type DifficultyId } from "@/game/difficulty";
 import { getLocalEventSummary } from "@/game/telemetry";
+import { BENEFICIAL_CELL, SKILL_CELL, STAGE_PRESENTATIONS } from "@/game/stage";
 
 const BRAND_MARK = "/manus-storage/naika-mark_1621aaa0.png";
-const BACKGROUND = "/manus-storage/naika-room-background-full-moon_95c25e77.png";
-const NIGHT_BGM = "/manus-storage/naika-night-defense-loop-no-bell_33ace5a3.mp3";
 const TITLE_BGM = "/manus-storage/naika-engawa-title-bgm_bcb74aac.wav";
 const DEFENSE_ATLAS = "/manus-storage/naika-3d-defense-atlas_d5b41c2f.png";
 const KOBAN_ASSET = "/manus-storage/naika-3d-koban-true-alpha_76e66136.png";
 const INSECT_ATLAS = "/manus-storage/naika-3d-insect-atlas_425b7f3c.png";
 const SLEEPER_ASSET = "/manus-storage/naika-sleeper-middle-aged-man-upperbody-states-clean_49502447.png";
 const PILLOW_ASSET = "/manus-storage/naika-sleeper-japanese-pillow-horizontal_e5543254.png";
+const BENEFICIAL_ATLAS = "/manus-storage/naika-beneficial-insects_28ab2b8a.png";
+const SKILL_ICON_ATLAS = "/manus-storage/naika-skill-statue-icons_89e93357.png";
+const SKILL_HANDS_ATLAS = "/manus-storage/naika-skill-hands-atlas_8df6a165.png";
 const PLACEMENT_RANGE: Record<ItemId, number> = { incense: 1.5, cat: 2.25, frog: 2, daruma: 2.25 };
 
 type SleeperState = "rested" | "bitten" | "distressed" | "awake";
@@ -67,7 +69,7 @@ export default function GameCanvas() {
   const [phase, setPhase] = useState<"title" | "playing" | "result">("title");
   const [hud, setHud] = useState<HudState>(initialHud);
   const [result, setResult] = useState<ResultState>({ score: 0, best: Number(localStorage.getItem("naika-high-score") ?? "0"), kills: 0, duration: 0 });
-  const [difficulty, setDifficulty] = useState<DifficultyId>("seasonal");
+  const [difficulty, setDifficulty] = useState<DifficultyId>("night");
   const [eventSummary, setEventSummary] = useState(() => getLocalEventSummary());
   const [audioSettings, setAudioSettings] = useState(() => ({
     bgm: Number(localStorage.getItem("naika-bgm-volume") ?? "0.10"),
@@ -78,6 +80,8 @@ export default function GameCanvas() {
   const [placedItems, setPlacedItems] = useState<PlacedItemView[]>([]);
   const [frogTongue, setFrogTongue] = useState<FrogTongueView | null>(null);
   const [itemActivations, setItemActivations] = useState<ItemActivationView[]>([]);
+  const [beneficials, setBeneficials] = useState<BeneficialView[]>([]);
+  const [skill, setSkill] = useState<SkillView>({ charge: 0, motif: "raijin", ready: false, casting: false });
   const [lastItemActivation, setLastItemActivation] = useState<ItemActivationView | null>(null);
   const [placementPreview, setPlacementPreview] = useState<{ item: ItemId; x: number; y: number } | null>(null);
   const [showContinuePrompt, setShowContinuePrompt] = useState(false);
@@ -91,6 +95,7 @@ export default function GameCanvas() {
   const previewHealth = sleeperPreview === "bitten" ? 62 : sleeperPreview === "distressed" ? 28 : sleeperPreview === "awake" ? 0 : hud.health;
   const displayHealth = sleeperPreview ? previewHealth : hud.health;
   const sleeperState = getSleeperState(displayHealth, phase === "result" || isGameOverWaking);
+  const stage = STAGE_PRESENTATIONS[difficulty];
   const catActivations = [
     ...itemActivations.filter((activation) => activation.item === "cat" && activation.kind === "trigger"),
     ...(activationPreview ? placedItems.filter((item) => item.id === "cat").map((item) => ({ key: `activation-preview-${item.key}`, item: item.id, x: item.x, y: item.y, tone: item.tone, kind: "trigger" as const })) : []),
@@ -113,6 +118,8 @@ export default function GameCanvas() {
         setLastItemActivation(activation);
         setItemActivations((current) => [...current.slice(-11), activation]);
       },
+      onBeneficials: setBeneficials,
+      onSkill: setSkill,
       onPhase: (nextPhase) => {
         if (nextPhase === "result") {
           setIsGameOverWaking(true);
@@ -226,12 +233,13 @@ export default function GameCanvas() {
   };
 
   return (
-    <main className="night-shell" style={{ backgroundImage: `linear-gradient(rgba(10, 24, 45, .35), rgba(10, 24, 45, .72)), url(${BACKGROUND})` }}>
-      <audio ref={bgmRef} src={phase === "title" ? TITLE_BGM : NIGHT_BGM} loop preload="auto" />
+    <main className={`night-shell stage-${difficulty}`} style={{ backgroundImage: `${stage.overlay}, url(${stage.background})` }}>
+      <audio ref={bgmRef} src={phase === "title" ? TITLE_BGM : stage.gameplayBgm} loop preload="auto" />
       <canvas ref={canvasRef} onPointerMove={updatePlacementPreview} className="game-canvas" aria-label="内蚊のゲーム画面" style={{ touchAction: "none" }} />
       <div className="paper-grain" aria-hidden="true" />
       {phase !== "result" && <div className="settings-control"><button type="button" className="settings-button" aria-label="音量設定を開く" aria-expanded={showAudioSettings} onClick={() => setShowAudioSettings((open) => !open)}>⚙</button>{showAudioSettings && <aside className="settings-panel" aria-label="音量設定"><div className="settings-panel-title">音量設定</div><label><span>BGM</span><output>{Math.round(audioSettings.bgm * 100)}%</output><input type="range" min="0" max="1" step="0.01" value={audioSettings.bgm} onInput={(event) => updateAudioSetting("bgm", event.currentTarget.value)} aria-label="BGM音量" /></label><label><span>効果音</span><output>{Math.round(audioSettings.sfx * 100)}%</output><input type="range" min="0" max="1" step="0.01" value={audioSettings.sfx} onInput={(event) => updateAudioSetting("sfx", event.currentTarget.value)} aria-label="効果音音量" /></label></aside>}</div>}
       {phase === "playing" && <div className="enemy-dom-layer" aria-live="polite" aria-label={`接近中の蚊 ${mosquitoes.length}匹`}>{mosquitoes.map((mosquito) => <div key={mosquito.id} className={`enemy-dom enemy-dom-${mosquito.type}`} style={{ left: `${((mosquito.x + 4) / 8) * 100}%`, top: `${((7 - mosquito.y) / 14) * 100}%`, "--insect-atlas": `url(${INSECT_ATLAS})`, "--enemy-bank": `${mosquito.bank}deg`, "--enemy-scale": `${mosquito.scale}` } as CSSProperties}><span className="enemy-wing enemy-wing-left" /><span className="enemy-wing enemy-wing-right" /><span className="enemy-body" /><span className="enemy-legs" /></div>)}</div>}
+      {phase === "playing" && <div className="beneficial-dom-layer" aria-live="polite" aria-label={`飛来中の益虫 ${beneficials.length}匹`}>{beneficials.map((beneficial) => <div key={beneficial.id} className={`beneficial-dom beneficial-${beneficial.type}`} style={{ left: `${((beneficial.x + 4) / 8) * 100}%`, top: `${((7 - beneficial.y) / 14) * 100}%`, "--beneficial-atlas": `url(${BENEFICIAL_ATLAS})`, "--beneficial-cell": `${BENEFICIAL_CELL[beneficial.type]}` } as CSSProperties}><span /></div>)}</div>}
       {phase === "playing" && <div className="koban-dom-layer" aria-live="polite" aria-label={`回収できる小判 ${kobans.length}枚`}>{kobans.map((koban) => <div key={koban.id} className="koban-dom" style={{ left: `${((koban.x + 4) / 8) * 100}%`, top: `${((7 - koban.y) / 14) * 100}%`, "--koban-asset": `url(${KOBAN_ASSET})` } as CSSProperties}><span>小判</span></div>)}</div>}
       {phase === "playing" && <div className="placed-item-dom-layer" aria-live="polite" aria-label={`設置中の防衛道具 ${placedItems.length}個`}>{placedItems.map((item) => {
         const progress = item.duration === null ? 1 : Math.max(0, Math.min(1, (item.remaining ?? 0) / item.duration));
@@ -260,7 +268,7 @@ export default function GameCanvas() {
         <div className="hud" aria-live="polite">
           <div className="hud-top">
             <button type="button" className="brand-mini brand-menu-button" onClick={openContinuePrompt} aria-label="最初の画面へ戻るか確認する"><img src={BRAND_MARK} alt="" /><span>内蚊</span></button>
-            <div className="score-cluster"><span>夜更けの得点</span><strong>{hud.score.toLocaleString()}</strong></div>
+            <div className="score-cluster"><span>{stage.shortLabel}の得点</span><strong>{hud.score.toLocaleString()}</strong></div>
           </div>
           <div className="hud-readout">
             <div className="breath-meter"><span>寝息</span><div><i style={{ width: `${displayHealth}%` }} /></div><b>{displayHealth}</b></div>
@@ -270,6 +278,8 @@ export default function GameCanvas() {
           {hud.placement && <div className="placement-callout"><span>選択中</span><strong>{itemCopy[hud.placement].name}</strong><small>畳をタップして置く</small></div>}
         </div>
       )}
+
+      {phase === "playing" && <div className={`skill-core ${skill.ready ? "is-ready" : ""} ${skill.casting ? "is-casting" : ""}`} style={{ "--skill-charge": `${Math.round(skill.charge * 360)}deg`, "--skill-icon": `url(${SKILL_ICON_ATLAS})`, "--skill-cell": `${SKILL_CELL[skill.motif]}`, "--skill-hands": `url(${SKILL_HANDS_ATLAS})`, "--skill-hand-row": `${SKILL_CELL[skill.motif]}` } as CSSProperties}><button type="button" onClick={() => handleRef.current?.activateSkill()} disabled={!skill.ready} aria-label={`${stage.skillLabel}を使う`}><span className="skill-ring" /><span className="skill-icon" /><small>{skill.ready ? "発動" : `${Math.round(skill.charge * 100)}%`}</small></button>{skill.casting && <div className="skill-hands" aria-label={stage.skillLabel}><i className="skill-hand-left" /><i className="skill-hand-right" /></div>}</div>}
 
       {phase === "playing" && <div className={`game-sleeper-anchor sleeper-state-${sleeperState}`} data-sleeper-state={sleeperState} role="img" aria-label={`中年男性：${sleeperStatusCopy[sleeperState]}`} style={{ "--sleeper-asset": `url(${SLEEPER_ASSET})`, "--pillow-asset": `url(${PILLOW_ASSET})` } as CSSProperties}><span className="sleeper-pillow" aria-hidden="true" /><span className="sleeper-sprite" /><span className="sleeper-bite sleeper-bite-one" /><span className="sleeper-bite sleeper-bite-two" /><span className="sleeper-bite sleeper-bite-three" /><span className="sleeper-bite sleeper-bite-four" /><span className="sleeper-bite sleeper-bite-five" /><span className="sleeper-worry-lines" aria-hidden="true" /><small>{sleeperStatusCopy[sleeperState]}</small></div>}
 
@@ -293,13 +303,13 @@ export default function GameCanvas() {
       {phase === "title" && (
         <section className="title-card" aria-labelledby="game-title">
           <img className="brand-mark" src={BRAND_MARK} alt="内蚊のシンボルマーク" />
-          <p className="eyebrow">夏夜の防衛アクション</p>
+          <p className="eyebrow">夏の防衛アクション</p>
           <h1 id="game-title"><em>内</em>蚊 <span>ないか</span></h1>
-          <p className="title-copy">今夜、守るのは<br />ひとりぶんの寝息。</p>
-          <div className="difficulty-switch" role="group" aria-label="夜の気配を選ぶ">
+          <p className="title-copy">この時間、守るのは<br />ひとりぶんの寝息。</p>
+          <div className="difficulty-switch" role="group" aria-label="守る時間帯を選ぶ">
             {(Object.keys(DIFFICULTY_PROFILES) as DifficultyId[]).map((id) => <button key={id} className={difficulty === id ? "is-selected" : ""} onClick={() => chooseDifficulty(id)}><span>{DIFFICULTY_PROFILES[id].shortLabel}</span><small>{DIFFICULTY_PROFILES[id].description}</small></button>)}
           </div>
-          <button className="start-button" onClick={start}>夜を守る <span>→</span></button>
+          <button className="start-button" onClick={start}>{stage.titleAction} <span>→</span></button>
           <p className="title-note">蚊をタップし、落ちたコインで道具を置こう。</p>
         </section>
       )}

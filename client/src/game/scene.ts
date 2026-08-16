@@ -22,8 +22,8 @@ import "@babylonjs/core/Shaders/default.vertex";
 import "@babylonjs/core/Shaders/standard.fragment";
 import { DIFFICULTY_PROFILES, getAdaptiveThreat, type DifficultyId } from "./difficulty";
 import { GameplayTelemetry, type RunAnalytics } from "./telemetry";
+import { STAGE_PRESENTATIONS, type BeneficialType, type SkillMotif } from "./stage";
 
-const ROOM_BACKGROUND = "/manus-storage/naika-room-background-full-moon_95c25e77.png";
 const ENEMY_SPRITES: Record<MosquitoType, string> = {
   small: "/manus-storage/naika-mosquito-small-sprite_af4952dd.png",
   fast: "/manus-storage/naika-mosquito-fast-sprite_f65f8e38.png",
@@ -55,6 +55,8 @@ export type KobanView = { id: number; x: number; y: number };
 export type PlacedItemView = { key: string; id: ItemId; x: number; y: number; range: number; duration: number | null; remaining: number | null; tone: string; underlayDisabled: boolean };
 export type FrogTongueView = { itemX: number; itemY: number; targetX: number; targetY: number; nonce: number; phase: "aim" | "pull" };
 export type ItemActivationView = { key: string; item: ItemId; x: number; y: number; tone: string; kind: "placed" | "trigger" };
+export type BeneficialView = { id: number; type: BeneficialType; x: number; y: number; drift: number };
+export type SkillView = { charge: number; motif: SkillMotif; ready: boolean; casting: boolean };
 
 export type GameCallbacks = {
   onHud: (hud: HudState) => void;
@@ -63,6 +65,8 @@ export type GameCallbacks = {
   onPlacedItems: (items: PlacedItemView[]) => void;
   onFrogTongue: (tongue: FrogTongueView | null) => void;
   onItemActivation: (activation: ItemActivationView) => void;
+  onBeneficials: (beneficials: BeneficialView[]) => void;
+  onSkill: (skill: SkillView) => void;
   onPhase: (phase: "title" | "playing" | "result") => void;
   onResult: (result: ResultState) => void;
 };
@@ -75,6 +79,7 @@ export type GameHandle = {
   setDifficulty: (difficulty: DifficultyId) => void;
   retry: () => void;
   setPaused: (paused: boolean) => void;
+  activateSkill: () => void;
   dispose: () => void;
 };
 
@@ -124,6 +129,7 @@ type PlacedItem = {
 
 type VfxKind = "tap" | "seal" | "smoke" | "damage";
 type Vfx = { kind: VfxKind; bornAt: number; duration: number; mesh: TransformNode };
+type Beneficial = { id: number; type: BeneficialType; x: number; y: number; vx: number; bornAt: number; drift: number };
 const ITEM_CELL: Record<ItemId, number> = { incense: 0, cat: 1, frog: 2, daruma: 3 };
 const VFX_CELL: Record<VfxKind, number> = { tap: 0, seal: 1, smoke: 2, damage: 3 };
 
@@ -169,7 +175,12 @@ class GameWorld {
   private coinsOnFloor: Coin[] = [];
   private placed: PlacedItem[] = [];
   private vfxs: Vfx[] = [];
-  private difficulty: DifficultyId = "seasonal";
+  private beneficials: Beneficial[] = [];
+  private difficulty: DifficultyId = "night";
+  private skillCharge = 0;
+  private skillCastUntil = 0;
+  private nextBeneficialAt = 10;
+  private beneficialId = 0;
   private currentThreat = 1;
   private taps = 0;
   private hits = 0;
@@ -245,7 +256,7 @@ class GameWorld {
     if (typeof detail?.sfx === "number") this.sfxVolume = clamp(detail.sfx, 0, 1);
   };
 
-  constructor(private readonly scene: Scene, callbacks: GameCallbacks) {
+  constructor(private readonly scene: Scene, callbacks: GameCallbacks, private readonly roomLayer: Layer) {
     this.callbacks = callbacks;
     window.addEventListener("naika-audio-settings", this.onAudioSettings);
     this.playerRoot = new TransformNode("sleeping-person", scene);
@@ -291,6 +302,7 @@ class GameWorld {
     this.telemetry.start(this.difficulty);
     this.callbacks.onPhase("playing");
     this.emitMosquitoViews(true);
+    this.emitSkill(true);
     this.emitHud(`${DIFFICULTY_PROFILES[this.difficulty].label}。蚊を落として、寝息を守ろう`);
     if (this.damageDemoStage) {
       this.runDamageDemo(true);
@@ -302,6 +314,9 @@ class GameWorld {
   setDifficulty = (difficulty: DifficultyId) => {
     if (this.running) return;
     this.difficulty = difficulty;
+    this.roomLayer.texture?.dispose();
+    this.roomLayer.texture = new Texture(STAGE_PRESENTATIONS[difficulty].background, this.scene, true, false);
+    this.emitSkill(true);
     this.emitHud(`${DIFFICULTY_PROFILES[difficulty].label}を選択`);
   };
 
@@ -311,6 +326,18 @@ class GameWorld {
     if (!this.running) return;
     this.paused = paused;
     if (paused) this.stopMosquitoBuzz();
+  };
+
+  activateSkill = () => {
+    if (!this.running || this.paused || this.skillCharge < 1 || this.skillCastUntil > this.now) return;
+    this.skillCharge = 0;
+    this.skillCastUntil = this.now + 0.92;
+    const stage = STAGE_PRESENTATIONS[this.difficulty];
+    this.playStageSkillSound(stage.skillMotif);
+    for (const mosquito of this.mosquitoes.filter((entry) => entry.state !== "falling")) this.killMosquito(mosquito, false, "skill");
+    this.callbacks.onSkill({ charge: this.skillCharge, motif: stage.skillMotif, ready: false, casting: true });
+    window.setTimeout(() => this.emitSkill(true), 940);
+    this.emitHud(`${stage.skillLabel}！ 蚊を挟み撃ちにした`);
   };
 
   abandonRun = () => {
@@ -326,6 +353,7 @@ class GameWorld {
     if (!this.running || this.paused) return;
     this.animatePlayer();
     this.now += safeDelta;
+    this.skillCharge = Math.min(1, this.skillCharge + safeDelta / 60);
     this.currentThreat = getAdaptiveThreat(this.health, this.hits / Math.max(1, this.taps), this.now);
     this.threatSum += this.currentThreat;
     this.threatSamples += 1;
@@ -343,7 +371,9 @@ class GameWorld {
     this.updateItems();
     this.emitPlacedItemViews();
     if (this.now >= this.nextSpawnAt) this.spawnMosquito();
+    if (this.now >= this.nextBeneficialAt) this.spawnBeneficial();
     this.updateMosquitoes(safeDelta);
+    this.updateBeneficials(safeDelta);
     this.emitMosquitoViews();
     this.updateMosquitoBuzz();
     this.updateCoins(safeDelta);
@@ -373,6 +403,7 @@ class GameWorld {
     }
     if (this.demo && !this.inspect && this.now >= this.nextAutoAt) this.runDemo();
     this.emitHud();
+    this.emitSkill();
   }
 
   handleTap = (x: number, y: number) => {
@@ -389,6 +420,14 @@ class GameWorld {
       .sort((a, b) => a.bornAt - b.bornAt)[0];
     if (coin) {
       this.collectCoin(coin);
+      return;
+    }
+
+    const beneficial = this.beneficials
+      .filter((entry) => distance(entry.x, entry.y, x, y) < 0.52)
+      .sort((a, b) => distance(a.x, a.y, x, y) - distance(b.x, b.y, x, y))[0];
+    if (beneficial) {
+      this.captureBeneficial(beneficial);
       return;
     }
 
@@ -438,6 +477,7 @@ class GameWorld {
     this.coinsOnFloor = [];
     this.placed = [];
     this.vfxs = [];
+    this.beneficials = [];
     this.now = 0;
     this.paused = false;
     this.health = 100;
@@ -457,6 +497,9 @@ class GameWorld {
     this.threatSamples = 0;
     this.nextMosquitoSyncAt = 0;
     this.nextKobanSyncAt = 0;
+    this.nextBeneficialAt = this.difficulty === "morning" ? 10 : this.difficulty === "dusk" ? 12 : 13;
+    this.skillCharge = 0;
+    this.skillCastUntil = 0;
     this.rewardPreviewComplete = false;
     this.itemPreviewComplete = false;
     this.frogPreviewComplete = false;
@@ -467,6 +510,7 @@ class GameWorld {
     this.callbacks.onKobans([]);
     this.callbacks.onPlacedItems([]);
     this.callbacks.onFrogTongue(null);
+    this.callbacks.onBeneficials([]);
     this.playerRoot.scaling.setAll(1);
   }
 
@@ -495,6 +539,59 @@ class GameWorld {
     this.mosquitoes.push({ id: this.mosquitoId++, type, hp: info.hp, state: "approaching", x, y, vx: 0, vy: 0, speed: info.speed, biteAt: 0, fallingFor: 0, capturedFor: 0, captureOriginX: x, captureOriginY: y, captureTargetX: x, captureTargetY: y, mesh: root });
     this.emitMosquitoViews(true);
     this.telemetry.track("enemy_spawned", { type, stage, threat: Number(this.currentThreat.toFixed(2)), difficulty: this.difficulty });
+  }
+
+  private spawnBeneficial() {
+    const stage = STAGE_PRESENTATIONS[this.difficulty];
+    const interval = this.difficulty === "morning" ? 10 : this.difficulty === "dusk" ? 12 + this.random() * 3 : 12 + this.random() * 5;
+    this.nextBeneficialAt = this.now + interval;
+    const type = stage.beneficial;
+    const beneficial: Beneficial = {
+      id: this.beneficialId++,
+      type,
+      x: -3.4 + this.random() * 6.8,
+      y: 2.2 + this.random() * 1.8,
+      vx: (this.random() > 0.5 ? 1 : -1) * (type === "cicada" ? 0.82 : 0.5),
+      bornAt: this.now,
+      drift: this.random() * Math.PI * 2,
+    };
+    this.beneficials.push(beneficial);
+    if (type === "cicada") this.playCicadaChirp();
+    else if (type === "firefly") this.playTone(940, 0.24, "sine", 0.035);
+    else this.playTone(310, 0.18, "triangle", 0.022);
+    this.emitBeneficialViews(true);
+    this.emitHud(`${stage.beneficialLabel}が飛んできた。タップで技が早く溜まる`);
+  }
+
+  private updateBeneficials(delta: number) {
+    for (const beneficial of [...this.beneficials]) {
+      const age = this.now - beneficial.bornAt;
+      beneficial.x += beneficial.vx * delta;
+      beneficial.y += Math.sin(this.now * (beneficial.type === "cicada" ? 7 : 4) + beneficial.drift) * delta * 0.42;
+      if (age > 7 || beneficial.x < -4.3 || beneficial.x > 4.3) this.beneficials = this.beneficials.filter((entry) => entry !== beneficial);
+    }
+    this.emitBeneficialViews();
+  }
+
+  private captureBeneficial(beneficial: Beneficial) {
+    if (!this.beneficials.includes(beneficial)) return;
+    this.beneficials = this.beneficials.filter((entry) => entry !== beneficial);
+    this.skillCharge = Math.min(1, this.skillCharge + 0.24);
+    this.playTone(beneficial.type === "cicada" ? 780 : beneficial.type === "firefly" ? 1040 : 520, 0.16, "sine", 0.05);
+    this.emitBeneficialViews(true);
+    this.emitSkill(true);
+    this.emitHud(`${STAGE_PRESENTATIONS[this.difficulty].beneficialLabel}を見つけた。技の気配が高まる`);
+  }
+
+  private emitBeneficialViews(force = false) {
+    if (!force && this.now < this.nextMosquitoSyncAt) return;
+    this.callbacks.onBeneficials(this.beneficials.map(({ id, type, x, y, drift }) => ({ id, type, x, y, drift })));
+  }
+
+  private emitSkill(force = false) {
+    if (!force && Math.floor(this.now * 10) % 2 !== 0) return;
+    const stage = STAGE_PRESENTATIONS[this.difficulty];
+    this.callbacks.onSkill({ charge: this.skillCharge, motif: stage.skillMotif, ready: this.skillCharge >= 1, casting: this.skillCastUntil > this.now });
   }
 
   private updateMosquitoes(delta: number) {
@@ -738,7 +835,7 @@ class GameWorld {
     else this.emitHud("しぶとい蚊。もう一度！");
   }
 
-  private killMosquito(mosquito: Mosquito, handTap: boolean) {
+  private killMosquito(mosquito: Mosquito, handTap: boolean, source: "tap" | "item" | "skill" = handTap ? "tap" : "item") {
     if (mosquito.state === "falling") return;
     mosquito.state = "falling";
     mosquito.fallingFor = 0;
@@ -750,8 +847,8 @@ class GameWorld {
     const info = MOSQUITO_INFO[mosquito.type];
     this.spawnCoin(mosquito.x, mosquito.y, info.coin);
     this.score += Math.round(info.score * DIFFICULTY_PROFILES[this.difficulty].rewardMultiplier * (1 + this.combo * 0.05));
-    this.telemetry.track("enemy_defeated", { type: mosquito.type, source: handTap ? "tap" : "item", combo: this.combo, score: this.score });
-    this.emitHud(handTap ? undefined : "道具が蚊を退けた");
+    this.telemetry.track("enemy_defeated", { type: mosquito.type, source, combo: this.combo, score: this.score });
+    if (source !== "skill") this.emitHud(handTap ? undefined : "道具が蚊を退けた");
   }
 
   private bitePlayer(damage: number) {
@@ -1067,6 +1164,40 @@ class GameWorld {
     } catch { /* Audio is enhancement only. */ }
   }
 
+  private playCicadaChirp() {
+    const context = this.getAudioContext();
+    if (!context) return;
+    try {
+      for (const [offset, frequency] of [[0, 4300], [0.11, 3900], [0.22, 4700]] as const) {
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = "sawtooth";
+        oscillator.frequency.value = frequency;
+        gain.gain.setValueAtTime(0.0001, context.currentTime + offset);
+        gain.gain.exponentialRampToValueAtTime(0.032 * this.sfxVolume, context.currentTime + offset + 0.018);
+        gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + offset + 0.19);
+        oscillator.connect(gain).connect(context.destination);
+        oscillator.start(context.currentTime + offset);
+        oscillator.stop(context.currentTime + offset + 0.2);
+      }
+    } catch { /* Ambient effects are enhancements only. */ }
+  }
+
+  private playStageSkillSound(motif: SkillMotif) {
+    if (motif === "buddha") {
+      this.playTone(188, 0.52, "sine", 0.09);
+      this.playTone(376, 0.42, "triangle", 0.055);
+      return;
+    }
+    if (motif === "fujin") {
+      this.playTone(132, 0.62, "sawtooth", 0.045);
+      this.playTone(540, 0.34, "sine", 0.045);
+      return;
+    }
+    this.playTone(92, 0.18, "square", 0.08);
+    window.setTimeout(() => this.playTone(62, 0.36, "sawtooth", 0.075), 110);
+  }
+
   private playInteractionSfx(source: HTMLAudioElement, volume: number, startAtSeconds = 0) {
     try {
       const effect = source.cloneNode(true) as HTMLAudioElement;
@@ -1146,7 +1277,7 @@ export async function createGameScene(engine: Engine, canvas: HTMLCanvasElement,
   camera.orthoTop = 7;
   camera.orthoBottom = -7;
   camera.setTarget(Vector3.Zero());
-  new Layer("room-background", ROOM_BACKGROUND, scene, true);
+  const roomLayer = new Layer("room-background", STAGE_PRESENTATIONS.night.background, scene, true);
 
   const vignette = MeshBuilder.CreatePlane("indigo-vignette", { width: 8, height: 14 }, scene);
   vignette.position.z = -0.1;
@@ -1156,7 +1287,7 @@ export async function createGameScene(engine: Engine, canvas: HTMLCanvasElement,
   vignetteMat.backFaceCulling = false;
   vignette.material = vignetteMat;
 
-  const world = new GameWorld(scene, callbacks);
+  const world = new GameWorld(scene, callbacks, roomLayer);
   const onPointerDown = (event: PointerEvent) => {
     const rect = canvas.getBoundingClientRect();
     const x = clamp(((event.clientX - rect.left) / rect.width - 0.5) * 8, -4, 4);
@@ -1174,6 +1305,7 @@ export async function createGameScene(engine: Engine, canvas: HTMLCanvasElement,
     setDifficulty: world.setDifficulty,
     retry: world.retry,
     setPaused: world.setPaused,
+    activateSkill: world.activateSkill,
     dispose: () => {
       canvas.removeEventListener("pointerdown", onPointerDown);
       world.dispose();

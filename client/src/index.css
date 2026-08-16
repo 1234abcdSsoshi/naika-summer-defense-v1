@@ -303,3 +303,22 @@ button { font: inherit; }
 @keyframes sleeper-wake { 0% { opacity: .2; transform: translateY(20px) scale(.86); } 56% { opacity: 1; transform: translateY(-8px) scale(1.06); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes gameover-wake-backdrop { 0% { opacity: 0; } 22% { opacity: 1; } 100% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .game-sleeper-anchor .sleeper-sprite, .sleeper-state-awake .sleeper-sprite, .gameover-wake-character .sleeper-sprite, .gameover-wake-overlay { animation: none; } }
+
+/* 朝・夕暮れ・夜の益虫と共通スキル。背景・小判・蚊より前、HUD文字より後に置く。 */
+.beneficial-dom-layer { position: absolute; inset: 0; z-index: 7; pointer-events: none; }
+.beneficial-dom { position: absolute; width: 66px; height: 52px; transform: translate(-50%, -50%); animation: beneficial-float 1.2s ease-in-out infinite alternate; }
+.beneficial-dom span { display: block; width: 100%; height: 100%; background-image: var(--beneficial-atlas); background-repeat: no-repeat; background-size: 300% 100%; background-position: calc(var(--beneficial-cell) * -50%) center; filter: drop-shadow(0 1px 2px rgba(10,22,36,.42)); }
+.beneficial-firefly span { filter: drop-shadow(0 0 9px rgba(255,220,108,.9)); }.beneficial-moth span { filter: drop-shadow(0 1px 3px rgba(229,236,243,.5)); }
+@keyframes beneficial-float { from { transform: translate(-50%, -50%) rotate(-6deg) translateY(-4px); } to { transform: translate(-50%, -50%) rotate(7deg) translateY(5px); } }
+
+.skill-core { position: absolute; left: 50%; top: 47%; z-index: 8; width: 78px; height: 78px; transform: translate(-50%, -50%); pointer-events: auto; }
+.skill-core button { position: relative; display: grid; place-items: center; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 50%; color: #fff5d9; background: transparent; }.skill-core button:disabled { opacity: .72; }.skill-core button:not(:disabled) { cursor: pointer; }.skill-core button:not(:disabled):active { transform: scale(.94); }
+.skill-ring { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(#f5ab35 var(--skill-charge), rgba(235,241,238,.24) 0deg); -webkit-mask: radial-gradient(transparent 58%, #000 60%); mask: radial-gradient(transparent 58%, #000 60%); }
+.skill-icon { position: relative; width: 55px; height: 55px; border: 2px solid rgba(245,214,141,.74); border-radius: 50%; background: #10253d var(--skill-icon) no-repeat; background-size: 300% 100%; background-position: calc(var(--skill-cell) * -50%) center; box-shadow: inset 0 0 12px rgba(0,0,0,.42); }
+.skill-core small { position: absolute; bottom: -13px; font-size: 9px; font-weight: 800; letter-spacing: .08em; text-shadow: 0 1px 2px #081424; }
+.skill-core.is-ready .skill-ring { background: conic-gradient(#ffd36e 360deg, #ffd36e 0deg); box-shadow: 0 0 16px rgba(255,211,110,.85); }.skill-core.is-ready .skill-icon { border-color: #ffe3a6; box-shadow: 0 0 16px rgba(255,193,74,.78), inset 0 0 12px rgba(0,0,0,.42); animation: skill-ready-pulse 1s ease-in-out infinite; }
+@keyframes skill-ready-pulse { 50% { transform: scale(1.06); } }
+.skill-hands { position: fixed; inset: 8% 0 15%; z-index: 12; pointer-events: none; background-image: var(--skill-hands); background-repeat: no-repeat; background-size: 100% 300%; background-position: center calc(var(--skill-hand-row) * -50%); animation: skill-hands-strike .86s cubic-bezier(.17,.8,.2,1) both; }.skill-hands i { display: none; }
+@keyframes skill-hands-strike { 0% { opacity: 0; transform: scaleX(.72); } 28% { opacity: 1; transform: scaleX(1.06); } 72% { opacity: 1; transform: scaleX(1); } 100% { opacity: 0; transform: scaleX(.86); } }
+.stage-morning .paper-grain { background-color: rgba(255,241,190,.05); }.stage-dusk .paper-grain { background-color: rgba(255,116,67,.06); }
+@media (max-width: 420px) { .beneficial-dom { width: 58px; height: 46px; }.skill-core { top: 45%; width: 70px; height: 70px; }.skill-icon { width: 49px; height: 49px; } }
