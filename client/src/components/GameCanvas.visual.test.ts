@@ -64,8 +64,10 @@ describe("蚊と小判の描画仕様", () => {
     expect(sceneSource).toContain("startMosquitoBuzz(context)");
     expect(sceneSource).toContain('const KOBAN_COLLECT_SFX = "/manus-storage/naika-koban-collect_c76439e0.mp3"');
     expect(sceneSource).toContain('const ITEM_PLACE_SFX = "/manus-storage/naika-item-place_c23e24d7.mp3"');
-    expect(sceneSource).toContain("}, 1000);");
+    expect(sceneSource).toContain("Math.max(0, 1000 - startAtSeconds * 1000)");
     expect(sceneSource).toContain("effect.pause();");
+    expect(sceneSource).toContain("this.playInteractionSfx(this.kobanCollectSfx, 0.48, 0.3);");
+    expect(sceneSource).toContain("Math.max(0, 1000 - startAtSeconds * 1000)");
   });
 
   it("確認画面を開くとゲームを一時停止し、キャンセルで再開する", () => {

@@ -817,7 +817,7 @@ class GameWorld {
     coin.mesh.dispose();
     this.coinsOnFloor = this.coinsOnFloor.filter((entry) => entry !== coin);
     this.emitKobanViews(true);
-    this.playInteractionSfx(this.kobanCollectSfx, 0.48);
+    this.playInteractionSfx(this.kobanCollectSfx, 0.48, 0.3);
     this.telemetry.track("coin_collected", { coins: this.coins, source: notice?.includes("ダルマ") ? "daruma" : "tap" });
     this.emitHud(notice);
   }
@@ -1067,16 +1067,17 @@ class GameWorld {
     } catch { /* Audio is enhancement only. */ }
   }
 
-  private playInteractionSfx(source: HTMLAudioElement, volume: number) {
+  private playInteractionSfx(source: HTMLAudioElement, volume: number, startAtSeconds = 0) {
     try {
       const effect = source.cloneNode(true) as HTMLAudioElement;
       effect.volume = volume * this.sfxVolume;
       effect.preload = "auto";
+      effect.currentTime = startAtSeconds;
       void effect.play().then(() => {
         window.setTimeout(() => {
           effect.pause();
           effect.currentTime = 0;
-        }, 1000);
+        }, Math.max(0, 1000 - startAtSeconds * 1000));
       }).catch(() => undefined);
     } catch { /* Sound effects are enhancements only. */ }
   }
