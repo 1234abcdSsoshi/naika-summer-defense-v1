@@ -79,6 +79,11 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain(".wind-chime-settings-panel");
   });
 
+  it("スキルボタンをフィールド中央より上の安全なタップ位置へ表示する", () => {
+    expect(styleSource).toContain(".skill-core { position: absolute; left: 50%; top: 41%");
+    expect(styleSource).toContain(".skill-core { top: 39%; width: 70px; height: 70px; }");
+  });
+
   it("風鈴タップからBGM音量を調整できる", () => {
     expect(componentSource).toContain('className={`wind-chime-control ${chimePulse ? "is-ringing" : ""}`}');
     expect(componentSource).toContain('aria-label="音量設定を開く"');
