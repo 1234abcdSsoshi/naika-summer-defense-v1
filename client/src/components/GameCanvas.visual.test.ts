@@ -79,10 +79,10 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain(".wind-chime-settings-panel");
   });
 
-  it("スキルボタンを風鈴と同じ右上列の安全なタップ位置へ表示する", () => {
-    expect(styleSource).toContain(".skill-core { position: absolute; top: 32%; right: 10px");
-    expect(styleSource).toContain(".skill-core { top: 31%; right: 10px; width: 70px; height: 70px; }");
-    expect(styleSource).toContain(".wind-chime-control { position: absolute; z-index: 9");
+  it("スキルボタンのY位置を維持し、X位置だけを画面中央へ表示する", () => {
+    expect(styleSource).toContain(".skill-core { position: absolute; top: 32%; left: 50%");
+    expect(styleSource).toContain("transform: translate(-50%, -50%)");
+    expect(styleSource).toContain(".skill-core { top: 31%; left: 50%; width: 70px; height: 70px; transform: translate(-50%, -50%); }");
   });
 
   it("風鈴タップからBGM音量を調整できる", () => {
