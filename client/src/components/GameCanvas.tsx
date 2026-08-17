@@ -22,7 +22,7 @@ const SKILL_ICON_ATLAS = "/manus-storage/naika-skill-statue-icons_89e93357.png";
 const SKILL_HANDS_ATLAS = "/manus-storage/naika-skill-hands-atlas_8df6a165.png";
 const WIND_CHIME_ASSETS: Record<DifficultyId, string> = {
   morning: "/manus-storage/naika-wind-chime-morning-3d_8707824b.png",
-  dusk: "/manus-storage/naika-wind-chime-dusk-3d_589733a8.png",
+  dusk: "/manus-storage/naika-wind-chime-dusk-transparent_eabe1a6a.png",
   night: "/manus-storage/naika-wind-chime-night-3d_46098ebc.png",
 };
 const INCENSE_ASSET = "/manus-storage/naika-incense-reference-cutout_eeafc68a.png";

@@ -81,7 +81,7 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).not.toContain('className="settings-button"');
     expect(componentSource).toContain("const WIND_CHIME_ASSETS: Record<DifficultyId, string>");
     expect(componentSource).toContain("naika-wind-chime-morning-3d_8707824b.png");
-    expect(componentSource).toContain("naika-wind-chime-dusk-3d_589733a8.png");
+    expect(componentSource).toContain("naika-wind-chime-dusk-transparent_eabe1a6a.png");
     expect(componentSource).toContain("naika-wind-chime-night-3d_46098ebc.png");
     expect(componentSource).toContain("const WIND_CHIME_TONES: Record<DifficultyId");
     expect(componentSource).toContain('morning: { frequencies: [1760, 2093, 2637]');
