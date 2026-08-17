@@ -59,7 +59,7 @@ describe("蚊と小判の描画仕様", () => {
 
   it("朝・夕暮れは風鈴だけを背景演出として表示し、背景の視認性を補正する", () => {
     expect(componentSource).toContain('className={`stage-atmosphere ${difficulty === "night" ? "is-night" : ""}`}');
-    expect(componentSource).toContain('className={`wind-chime-control ${chimePulse ? "is-ringing" : ""}`}');
+    expect(componentSource).toContain('className={`wind-chime-control wind-chime-${difficulty} ${chimePulse ? "is-ringing" : ""}`}');
     expect(componentSource).not.toContain('className="stage-cloud');
     expect(styleSource).not.toContain("stage-cloud-drift");
     expect(styleSource).not.toContain(".stage-cloud {");
@@ -70,7 +70,12 @@ describe("蚊と小判の描画仕様", () => {
 
   it("歯車を表示せず、風鈴タップで音量設定を開きランダムなチリン音を再生する", () => {
     expect(componentSource).not.toContain('className="settings-button"');
-    expect(componentSource).toContain('className={`wind-chime-control ${chimePulse ? "is-ringing" : ""}`}');
+    expect(componentSource).toContain("const WIND_CHIME_ASSETS: Record<DifficultyId, string>");
+    expect(componentSource).toContain("naika-wind-chime-morning-3d_8707824b.png");
+    expect(componentSource).toContain("naika-wind-chime-dusk-3d_589733a8.png");
+    expect(componentSource).toContain("naika-wind-chime-night-3d_46098ebc.png");
+    expect(componentSource).toContain('className={`wind-chime-control wind-chime-${difficulty} ${chimePulse ? "is-ringing" : ""}`}');
+    expect(componentSource).toContain('className="wind-chime-art"');
     expect(componentSource).toContain('aria-label="音量設定を開く"');
     expect(componentSource).toContain("unlockWindChimeAudio(); playWindChime();");
     expect(componentSource).toContain("7200 + Math.random() * 5800");
@@ -91,7 +96,7 @@ describe("蚊と小判の描画仕様", () => {
   });
 
   it("風鈴タップからBGM音量を調整できる", () => {
-    expect(componentSource).toContain('className={`wind-chime-control ${chimePulse ? "is-ringing" : ""}`}');
+    expect(componentSource).toContain('className={`wind-chime-control wind-chime-${difficulty} ${chimePulse ? "is-ringing" : ""}`}');
     expect(componentSource).toContain('aria-label="音量設定を開く"');
     expect(componentSource).toContain('aria-expanded={showAudioSettings}');
     expect(componentSource).toContain('has("settings-check")');
