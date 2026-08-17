@@ -79,7 +79,11 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain(".wind-chime-settings-panel");
   });
 
-  it("スキルボタンのY位置を維持し、X位置だけを画面中央へ表示する", () => {
+  it("スキルボタンは満タン時だけ表示・操作可能にし、発動中は入力を遮らない", () => {
+    expect(componentSource).toContain('phase === "playing" && (skill.ready || skill.casting)');
+    expect(componentSource).toContain('disabled={!skill.ready}');
+    expect(componentSource).toContain('skill.ready ? "発動" : "発動中"');
+    expect(styleSource).toContain(".skill-core.is-casting { pointer-events: none; }");
     expect(styleSource).toContain(".skill-core { position: absolute; top: 32%; left: 50%");
     expect(styleSource).toContain("transform: translate(-50%, -50%)");
     expect(styleSource).toContain(".skill-core { top: 31%; left: 50%; width: 70px; height: 70px; transform: translate(-50%, -50%); }");

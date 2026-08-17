@@ -327,6 +327,7 @@ button { font: inherit; }
 @keyframes beneficial-float { from { transform: translate(-50%, -50%) rotate(-6deg) translateY(-4px); } to { transform: translate(-50%, -50%) rotate(7deg) translateY(5px); } }
 
 .skill-core { position: absolute; top: 32%; left: 50%; z-index: 8; width: 78px; height: 78px; transform: translate(-50%, -50%); pointer-events: auto; }
+.skill-core.is-casting { pointer-events: none; }
 .skill-core button { position: relative; display: grid; place-items: center; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 50%; color: #fff5d9; background: transparent; }.skill-core button:disabled { opacity: .72; }.skill-core button:not(:disabled) { cursor: pointer; }.skill-core button:not(:disabled):active { transform: scale(.94); }
 .skill-ring { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(#f5ab35 var(--skill-charge), rgba(235,241,238,.24) 0deg); -webkit-mask: radial-gradient(transparent 58%, #000 60%); mask: radial-gradient(transparent 58%, #000 60%); }
 .skill-icon { position: relative; width: 55px; height: 55px; border: 2px solid rgba(245,214,141,.74); border-radius: 50%; background: #10253d var(--skill-icon) no-repeat; background-size: 300% 100%; background-position: calc(var(--skill-cell) * -50%) center; box-shadow: inset 0 0 12px rgba(0,0,0,.42); }
