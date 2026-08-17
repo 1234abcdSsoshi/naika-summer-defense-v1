@@ -52,7 +52,7 @@ export const STAGE_PRESENTATIONS: Record<StageId, StagePresentation> = {
     shortLabel: "夜",
     description: "満月と行灯に誘われ、蛾が舞い込む夜。",
     titleAction: "夜を守る",
-    background: "/manus-storage/naika-room-background-full-moon_95c25e77.png",
+    background: "/manus-storage/naika-room-background-full-moon-no-chime_d54609b8.png",
     overlay: "linear-gradient(rgba(10, 24, 45, .35), rgba(10, 24, 45, .72))",
     gameplayBgm: "/manus-storage/naika-night-defense-loop-no-bell_33ace5a3.mp3",
     beneficial: "moth",
