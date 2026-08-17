@@ -74,11 +74,17 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).toContain("naika-wind-chime-morning-3d_8707824b.png");
     expect(componentSource).toContain("naika-wind-chime-dusk-3d_589733a8.png");
     expect(componentSource).toContain("naika-wind-chime-night-3d_46098ebc.png");
+    expect(componentSource).toContain("const WIND_CHIME_TONES: Record<DifficultyId");
+    expect(componentSource).toContain('morning: { frequencies: [1760, 2093, 2637]');
+    expect(componentSource).toContain('dusk: { frequencies: [1175, 1397, 1760]');
+    expect(componentSource).toContain('night: { frequencies: [880, 1109, 1319, 1760]');
+    expect(componentSource).toContain("const tone = WIND_CHIME_TONES[difficulty]");
     expect(componentSource).toContain('className={`wind-chime-control wind-chime-${difficulty} ${chimePulse ? "is-ringing" : ""}`}');
     expect(componentSource).toContain('className="wind-chime-art"');
     expect(componentSource).toContain('aria-label="音量設定を開く"');
     expect(componentSource).toContain("unlockWindChimeAudio(); playWindChime();");
     expect(componentSource).toContain("7200 + Math.random() * 5800");
+    expect(componentSource).not.toContain('if (difficulty === "night" || phase === "result") return;');
     expect(componentSource).toContain("0.065 * audioSettings.sfx");
     expect(componentSource).toContain('className="settings-panel wind-chime-settings-panel"');
     expect(styleSource).toContain(".wind-chime-control");

@@ -25,6 +25,11 @@ const WIND_CHIME_ASSETS: Record<DifficultyId, string> = {
   dusk: "/manus-storage/naika-wind-chime-dusk-3d_589733a8.png",
   night: "/manus-storage/naika-wind-chime-night-3d_46098ebc.png",
 };
+const WIND_CHIME_TONES: Record<DifficultyId, { frequencies: number[]; waveform: OscillatorType; resonance: number; decay: number; gap: number }> = {
+  morning: { frequencies: [1760, 2093, 2637], waveform: "sine", resonance: 0.22, decay: 1.02, gap: 0.027 },
+  dusk: { frequencies: [1175, 1397, 1760], waveform: "triangle", resonance: 0.3, decay: 1.32, gap: 0.042 },
+  night: { frequencies: [880, 1109, 1319, 1760], waveform: "sine", resonance: 0.36, decay: 1.7, gap: 0.052 },
+};
 const PLACEMENT_RANGE: Record<ItemId, number> = { incense: 1.5, cat: 2.25, frog: 2, daruma: 2.25 };
 
 type SleeperState = "rested" | "bitten" | "distressed" | "awake";
@@ -117,29 +122,30 @@ export default function GameCanvas() {
   const playWindChime = () => {
     const context = windChimeAudioRef.current;
     if (!context || audioSettings.sfx <= 0) return;
+    const tone = WIND_CHIME_TONES[difficulty];
     const now = context.currentTime;
     const master = context.createGain();
     master.gain.setValueAtTime(0.0001, now);
     master.gain.exponentialRampToValueAtTime(0.065 * audioSettings.sfx, now + 0.012);
-    master.gain.exponentialRampToValueAtTime(0.0001, now + 1.25);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + tone.decay);
     master.connect(context.destination);
-    [1568, 1976, 2349].forEach((frequency, index) => {
+    tone.frequencies.forEach((frequency, index) => {
       const oscillator = context.createOscillator();
       const overtone = context.createGain();
-      oscillator.type = index === 1 ? "sine" : "triangle";
-      oscillator.frequency.setValueAtTime(frequency, now + index * 0.035);
-      overtone.gain.setValueAtTime(index === 0 ? 0.42 : 0.25, now);
+      oscillator.type = tone.waveform;
+      oscillator.frequency.setValueAtTime(frequency, now + index * tone.gap);
+      overtone.gain.setValueAtTime(index === 0 ? 0.44 : tone.resonance, now);
       oscillator.connect(overtone);
       overtone.connect(master);
-      oscillator.start(now + index * 0.035);
-      oscillator.stop(now + 1.3);
+      oscillator.start(now + index * tone.gap);
+      oscillator.stop(now + tone.decay + 0.08);
     });
     setChimePulse(true);
     window.setTimeout(() => setChimePulse(false), 720);
   };
 
   useEffect(() => {
-    if (difficulty === "night" || phase === "result") return;
+    if (phase === "result") return;
     let cancelled = false;
     let timer: number | undefined;
     const scheduleChime = () => {
