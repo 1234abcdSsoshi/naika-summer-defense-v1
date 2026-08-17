@@ -69,9 +69,10 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain("@keyframes wind-chime-sway");
     expect(styleSource).toContain("backdrop-filter: brightness(.96) contrast(1.08) saturate(1.02)");
     expect(styleSource).toContain(".stage-dusk .stage-contrast-overlay");
+    expect(componentSource).toContain('className="incense-realistic"');
     expect(componentSource).toContain('className="incense-smoke"');
     expect(styleSource).toContain(".incense-smoke");
-    expect(styleSource).toContain("受け皿、渦巻き、火種、煙");
+    expect(styleSource).toContain("金属皿、実物に近い緑の渦巻き、火種、薄い煙");
   });
 
   it("歯車を表示せず、風鈴タップで音量設定を開きランダムなチリン音を再生する", () => {
@@ -208,12 +209,13 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain(".placed-item-frog.is-aiming .placed-item-art");
   });
 
-  it("アイテムの残り時間は右下の小型表示で、線香本体だけが回転する", () => {
-    expect(componentSource).toContain('className="incense-coil"');
+  it("アイテムの残り時間は右下の小型表示で、線香本体は立体的な静的オブジェクトとして表示する", () => {
+    expect(componentSource).toContain('className="incense-realistic"');
     expect(styleSource).toContain("top: auto; right: 2px; bottom: -4px");
     expect(styleSource).toContain("width: 18px; height: 18px");
-    expect(styleSource).toContain("@keyframes incense-coil-turn");
-    expect(styleSource).toContain("animation: incense-coil-turn 5.6s linear infinite");
+    expect(styleSource).toContain(".incense-plate-rim");
+    expect(styleSource).toContain(".incense-coil-path");
+    expect(styleSource).toContain(".incense-ember-core");
     expect(sceneSource).not.toContain("item.mesh.rotation.z += 0.015");
     expect(sceneSource).toContain("private readonly itemPreviewId: ItemId");
     expect(sceneSource).toContain("private readonly itemPreviewHold");
