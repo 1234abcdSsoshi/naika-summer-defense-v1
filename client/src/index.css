@@ -307,6 +307,13 @@ button { font: inherit; }
 .placed-item-incense .placed-item-art { width: 35px; height: 35px; margin-top: -4px; border: 0 !important; border-radius: 0; box-shadow: none !important; }
 .placed-item-incense .incense-smoke { left: 24px; top: -14px; width: 11px; height: 27px; transform: scale(.72); transform-origin: 100% 100%; }
 @media (max-width: 420px) { .placed-item-incense .placed-item-art { width: 33px; height: 33px; margin-top: -3px; } }
+.placed-item-incense .incense-smoke { z-index: 7; left: 23px; top: -25px; width: 19px; height: 52px; border: 0; border-radius: 0; background: radial-gradient(ellipse at 74% 86%, rgba(255,255,247,.62) 0 5%, rgba(238,241,231,.25) 17%, transparent 42%), radial-gradient(ellipse at 29% 54%, rgba(242,244,234,.28) 0 9%, transparent 43%); filter: blur(.55px) drop-shadow(0 0 4px rgba(239,244,230,.22)); opacity: 0; transform: none; animation: incense-smoke-plume 4.4s cubic-bezier(.32,.07,.26,1) infinite; pointer-events: none; }
+.placed-item-incense .incense-smoke::before, .placed-item-incense .incense-smoke::after { content: ""; position: absolute; pointer-events: none; border: 0; background: radial-gradient(ellipse at center, rgba(248,249,241,.36) 0 11%, rgba(238,241,231,.16) 29%, transparent 68%); filter: blur(1.1px); }
+.placed-item-incense .incense-smoke::before { left: -9px; top: 8px; width: 22px; height: 32px; transform: rotate(-18deg); animation: incense-smoke-drift-one 4.4s ease-in-out infinite; }
+.placed-item-incense .incense-smoke::after { left: 2px; top: -13px; width: 26px; height: 38px; transform: rotate(17deg); animation: incense-smoke-drift-two 4.4s ease-in-out infinite; }
+@keyframes incense-smoke-plume { 0% { opacity: 0; transform: translate(1px, 12px) scale(.42); } 15% { opacity: .38; } 48% { opacity: .29; } 82% { opacity: .08; transform: translate(-10px, -22px) scale(1.28); } 100% { opacity: 0; transform: translate(-14px, -34px) scale(1.42); } }
+@keyframes incense-smoke-drift-one { 0%, 100% { transform: translate(3px, 6px) rotate(-18deg) scale(.55); } 50% { transform: translate(-5px, -8px) rotate(13deg) scale(1.08); } }
+@keyframes incense-smoke-drift-two { 0%, 100% { transform: translate(-2px, 9px) rotate(17deg) scale(.42); } 55% { transform: translate(7px, -11px) rotate(-16deg) scale(1.05); } }
 @keyframes incense-smoke-rise { 0%, 100% { opacity: .34; transform: translateY(5px) rotate(-8deg); } 52% { opacity: .82; transform: translate(4px, -7px) rotate(8deg); } }
 @keyframes incense-ember-pulse { from { opacity: .38; transform: scale(.82); } to { opacity: .82; transform: scale(1.12); } }
 .placed-item-daruma .placed-item-art { animation: daruma-travel-bob .48s ease-in-out infinite alternate; }

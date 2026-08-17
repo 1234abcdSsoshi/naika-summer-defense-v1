@@ -72,6 +72,8 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).toContain('const INCENSE_ASSET = "/manus-storage/naika-incense-reference-cutout_eeafc68a.png"');
     expect(componentSource).toContain('className="incense-smoke"');
     expect(styleSource).toContain(".incense-smoke");
+    expect(styleSource).toContain("@keyframes incense-smoke-plume");
+    expect(styleSource).toContain("incense-smoke-drift-one");
     expect(styleSource).toContain("background-image: var(--incense-asset) !important");
   });
 
