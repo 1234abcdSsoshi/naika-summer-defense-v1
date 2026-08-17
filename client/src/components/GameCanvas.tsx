@@ -367,7 +367,7 @@ export default function GameCanvas() {
             const data = hud.items[item];
             const ready = hud.coins >= data.price && !data.active;
             return <button key={item} className={`item-button ${ready ? "is-ready" : ""} ${data.active ? "is-active" : ""}`} onClick={() => selectItem(item)} disabled={data.active}>
-              <span className={`item-thumb item-thumb-${item}`} aria-hidden="true" style={{ "--defense-atlas": `url(${DEFENSE_ATLAS})` } as CSSProperties} />
+              <span className={`item-thumb item-thumb-${item}`} aria-hidden="true" style={{ "--defense-atlas": `url(${DEFENSE_ATLAS})`, "--incense-asset": `url(${INCENSE_ASSET})` } as CSSProperties} />
               <span className="item-symbol">{itemCopy[item].symbol}</span>
               <span className="item-name">{itemCopy[item].name}</span>
               <span className="item-meta">{data.active ? (data.cooldown ? `${data.cooldown}s` : "稼働中") : <><i className="koban-mini" style={{ "--koban-asset": `url(${KOBAN_ASSET})` } as CSSProperties} aria-hidden="true" />{data.price}</>}</span>

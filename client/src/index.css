@@ -303,8 +303,9 @@ button { font: inherit; }
 .placed-item-incense .incense-coil-path { stroke-width: 5.1; transform: translateY(-1px) scaleY(.8); transform-origin: center; }
 .placed-item-incense .incense-smoke { left: 45px; top: -24px; transform-origin: 100% 100%; }
 @media (max-width: 420px) { .placed-item-incense .placed-item-art { width: 60px; height: 43px; }.placed-item-incense .incense-realistic { left: 1px; width: 70px; height: 70px; } }
-.placed-item-incense .placed-item-art { width: 70px; height: 70px; margin-top: -8px; border: 0 !important; border-radius: 0; box-shadow: none !important; }
-@media (max-width: 420px) { .placed-item-incense .placed-item-art { width: 66px; height: 66px; margin-top: -6px; } }
+.placed-item-incense .placed-item-art { width: 35px; height: 35px; margin-top: -4px; border: 0 !important; border-radius: 0; box-shadow: none !important; }
+.placed-item-incense .incense-smoke { left: 24px; top: -14px; width: 11px; height: 27px; transform: scale(.72); transform-origin: 100% 100%; }
+@media (max-width: 420px) { .placed-item-incense .placed-item-art { width: 33px; height: 33px; margin-top: -3px; } }
 @keyframes incense-smoke-rise { 0%, 100% { opacity: .34; transform: translateY(5px) rotate(-8deg); } 52% { opacity: .82; transform: translate(4px, -7px) rotate(8deg); } }
 @keyframes incense-ember-pulse { from { opacity: .38; transform: scale(.82); } to { opacity: .82; transform: scale(1.12); } }
 .placed-item-daruma .placed-item-art { animation: daruma-travel-bob .48s ease-in-out infinite alternate; }
