@@ -69,6 +69,9 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain("@keyframes wind-chime-sway");
     expect(styleSource).toContain("backdrop-filter: brightness(.96) contrast(1.08) saturate(1.02)");
     expect(styleSource).toContain(".stage-dusk .stage-contrast-overlay");
+    expect(componentSource).toContain('className="incense-smoke"');
+    expect(styleSource).toContain(".incense-smoke");
+    expect(styleSource).toContain("受け皿、渦巻き、火種、煙");
   });
 
   it("歯車を表示せず、風鈴タップで音量設定を開きランダムなチリン音を再生する", () => {
