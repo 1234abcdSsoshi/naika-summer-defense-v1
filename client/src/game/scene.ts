@@ -497,7 +497,7 @@ class GameWorld {
     this.threatSamples = 0;
     this.nextMosquitoSyncAt = 0;
     this.nextKobanSyncAt = 0;
-    this.nextBeneficialAt = this.difficulty === "morning" ? 10 : this.difficulty === "dusk" ? 12 : 13;
+    this.nextBeneficialAt = this.difficulty === "morning" ? 12 : this.difficulty === "dusk" ? 12 : 13;
     this.skillCharge = 0;
     this.skillCastUntil = 0;
     this.rewardPreviewComplete = false;
@@ -543,7 +543,7 @@ class GameWorld {
 
   private spawnBeneficial() {
     const stage = STAGE_PRESENTATIONS[this.difficulty];
-    const interval = this.difficulty === "morning" ? 10 : this.difficulty === "dusk" ? 12 + this.random() * 3 : 12 + this.random() * 6;
+    const interval = this.difficulty === "morning" ? 12 : this.difficulty === "dusk" ? 12 + this.random() * 3 : 12 + this.random() * 6;
     this.nextBeneficialAt = this.now + interval;
     const type = stage.beneficial;
     const beneficial: Beneficial = {
@@ -576,7 +576,8 @@ class GameWorld {
   private captureBeneficial(beneficial: Beneficial) {
     if (!this.beneficials.includes(beneficial)) return;
     this.beneficials = this.beneficials.filter((entry) => entry !== beneficial);
-    this.skillCharge = Math.min(1, this.skillCharge + 0.24);
+    const captureCharge = beneficial.type === "cicada" ? 0.2 : 0.24;
+    this.skillCharge = Math.min(1, this.skillCharge + captureCharge);
     this.playTone(beneficial.type === "cicada" ? 780 : beneficial.type === "firefly" ? 1040 : 520, 0.16, "sine", 0.05);
     this.emitBeneficialViews(true);
     this.emitSkill(true);

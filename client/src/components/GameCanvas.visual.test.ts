@@ -57,6 +57,16 @@ describe("蚊と小判の描画仕様", () => {
     expect(sceneSource).toContain("texture.vOffset = 1");
   });
 
+  it("朝・夕暮れに風鈴と雲の背景演出を表示し、背景の視認性を補正する", () => {
+    expect(componentSource).toContain('className={`stage-atmosphere ${difficulty === "night" ? "is-hidden" : ""}`}');
+    expect(componentSource).toContain('className="wind-chime"');
+    expect(componentSource).toContain('className="stage-cloud stage-cloud-one"');
+    expect(styleSource).toContain("@keyframes stage-cloud-drift");
+    expect(styleSource).toContain("@keyframes wind-chime-sway");
+    expect(styleSource).toContain("backdrop-filter: brightness(.84) contrast(1.16) saturate(.92)");
+    expect(styleSource).toContain(".stage-dusk .stage-contrast-overlay");
+  });
+
   it("歯車設定からBGM音量を調整できる", () => {
     expect(componentSource).toContain('className="settings-button"');
     expect(componentSource).toContain('aria-label="音量設定を開く"');
@@ -112,8 +122,9 @@ describe("蚊と小判の描画仕様", () => {
     expect(sceneSource).toContain('onBeneficials: (beneficials: BeneficialView[]) => void');
     expect(sceneSource).toContain('onSkill: (skill: SkillView) => void');
     expect(sceneSource).toContain('private spawnBeneficial()');
-    expect(sceneSource).toContain('this.difficulty === "morning" ? 10 : this.difficulty === "dusk" ? 12 + this.random() * 3 : 12 + this.random() * 6');
-    expect(sceneSource).toContain('this.skillCharge = Math.min(1, this.skillCharge + 0.24)');
+    expect(sceneSource).toContain('this.difficulty === "morning" ? 12 : this.difficulty === "dusk" ? 12 + this.random() * 3 : 12 + this.random() * 6');
+    expect(sceneSource).toContain('const captureCharge = beneficial.type === "cicada" ? 0.2 : 0.24');
+    expect(sceneSource).toContain('this.skillCharge = Math.min(1, this.skillCharge + captureCharge)');
     expect(sceneSource).toContain('this.skillCharge = Math.min(1, this.skillCharge + safeDelta / 60)');
     expect(sceneSource).toContain('activateSkill = () =>');
     expect(sceneSource).toContain('this.killMosquito(mosquito, false, "skill")');
