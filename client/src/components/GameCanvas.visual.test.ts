@@ -67,7 +67,7 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).not.toContain("stage-cloud-drift");
     expect(styleSource).not.toContain(".stage-cloud {");
     expect(styleSource).toContain("@keyframes wind-chime-sway");
-    expect(styleSource).toContain("backdrop-filter: brightness(.84) contrast(1.16) saturate(.92)");
+    expect(styleSource).toContain("backdrop-filter: brightness(.96) contrast(1.08) saturate(1.02)");
     expect(styleSource).toContain(".stage-dusk .stage-contrast-overlay");
   });
 
