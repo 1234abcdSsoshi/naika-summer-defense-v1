@@ -218,6 +218,8 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).toContain('className="incense-metal-stand"');
     expect(styleSource).toContain(".incense-metal-stand");
     expect(styleSource).toContain(".incense-ember-core");
+    expect(styleSource).toContain("perspective(110px) rotateX(24deg) rotateZ(-5deg)");
+    expect(styleSource).toContain("width: 64px; height: 45px");
     expect(sceneSource).not.toContain("item.mesh.rotation.z += 0.015");
     expect(sceneSource).toContain("private readonly itemPreviewId: ItemId");
     expect(sceneSource).toContain("private readonly itemPreviewHold");
