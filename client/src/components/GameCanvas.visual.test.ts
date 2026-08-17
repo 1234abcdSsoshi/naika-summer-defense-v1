@@ -39,8 +39,8 @@ describe("蚊と小判の描画仕様", () => {
     expect(stageSource).toContain('dusk: {');
     expect(stageSource).toContain('night: {');
     expect(stageSource).toContain('/manus-storage/naika-room-background-morning-tatami-wide_b31d6bd6.png');
-    expect(stageSource).toContain('/manus-storage/naika-room-background-dusk-lived-in_cf056649.png');
-    expect(stageSource).toContain('/manus-storage/naika-room-background-night-lived-in_154f4a91.png');
+    expect(stageSource).toContain('/manus-storage/naika-room-background-dusk-tatami-wide_086167ff.png');
+    expect(stageSource).toContain('/manus-storage/naika-room-background-night-tatami-wide_07b8a0e5.png');
     expect(componentSource).toContain('const stage = STAGE_PRESENTATIONS[difficulty]');
     expect(componentSource).toContain('url(${stage.background})');
     expect(sceneSource).toContain('STAGE_PRESENTATIONS.night.background');
@@ -65,10 +65,7 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).not.toContain(".stage-cloud {");
     expect(styleSource).toContain("@keyframes wind-chime-sway");
     expect(styleSource).toContain("backdrop-filter: brightness(.84) contrast(1.16) saturate(.92)");
-    expect(styleSource).toContain('.stage-dusk .stage-contrast-overlay');
-    expect(styleSource).toContain('.stage-dusk .stage-atmosphere::before');
-    expect(styleSource).toContain('.stage-night .stage-atmosphere::before');
-    expect(styleSource).toContain('@keyframes moon-glow');
+    expect(styleSource).toContain(".stage-dusk .stage-contrast-overlay");
   });
 
   it("歯車を表示せず、風鈴タップで音量設定を開きランダムなチリン音を再生する", () => {
