@@ -216,6 +216,7 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).toContain('"--incense-asset": `url(${INCENSE_ASSET})`');
     expect(styleSource).toContain("width: 35px; height: 35px");
     expect(styleSource).toContain("background-size: contain !important");
+    expect(styleSource).toContain(".item-thumb-incense { transform: scale(1.3)");
     expect(sceneSource).not.toContain("item.mesh.rotation.z += 0.015");
     expect(sceneSource).toContain("private readonly itemPreviewId: ItemId");
     expect(sceneSource).toContain("private readonly itemPreviewHold");
