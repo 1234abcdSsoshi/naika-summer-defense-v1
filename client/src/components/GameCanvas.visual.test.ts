@@ -38,8 +38,8 @@ describe("蚊と小判の描画仕様", () => {
     expect(stageSource).toContain('morning: {');
     expect(stageSource).toContain('dusk: {');
     expect(stageSource).toContain('night: {');
-    expect(stageSource).toContain('/manus-storage/naika-room-background-morning_61f9fe46.png');
-    expect(stageSource).toContain('/manus-storage/naika-room-background-dusk_2b5c1a6f.png');
+    expect(stageSource).toContain('/manus-storage/naika-room-background-morning-no-chime-balanced_9f94f6eb.png');
+    expect(stageSource).toContain('/manus-storage/naika-room-background-dusk-no-chime-balanced_f40df828.png');
     expect(stageSource).toContain('/manus-storage/naika-room-background-full-moon-no-chime_d54609b8.png');
     expect(componentSource).toContain('const stage = STAGE_PRESENTATIONS[difficulty]');
     expect(componentSource).toContain('url(${stage.background})');
