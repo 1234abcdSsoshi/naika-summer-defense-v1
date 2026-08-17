@@ -72,7 +72,7 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).toContain('className="incense-realistic"');
     expect(componentSource).toContain('className="incense-smoke"');
     expect(styleSource).toContain(".incense-smoke");
-    expect(styleSource).toContain("金属皿、実物に近い緑の渦巻き、火種、薄い煙");
+    expect(styleSource).toContain("#04080d");
   });
 
   it("歯車を表示せず、風鈴タップで音量設定を開きランダムなチリン音を再生する", () => {
@@ -215,6 +215,8 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain("width: 18px; height: 18px");
     expect(styleSource).toContain(".incense-plate-rim");
     expect(styleSource).toContain(".incense-coil-path");
+    expect(componentSource).toContain('className="incense-metal-stand"');
+    expect(styleSource).toContain(".incense-metal-stand");
     expect(styleSource).toContain(".incense-ember-core");
     expect(sceneSource).not.toContain("item.mesh.rotation.z += 0.015");
     expect(sceneSource).toContain("private readonly itemPreviewId: ItemId");
