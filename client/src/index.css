@@ -292,6 +292,8 @@ button { font: inherit; }
 .incense-smoke { position: absolute; z-index: 5; left: 43px; top: -20px; width: 16px; height: 38px; border-top: 1.7px solid rgba(236,241,232,.74); border-left: 1.7px solid rgba(236,241,232,.6); border-radius: 75% 0 0 0; filter: drop-shadow(0 0 4px rgba(255,252,230,.52)); animation: incense-smoke-rise 2.7s ease-in-out infinite; }
 .incense-smoke::after { content: ""; position: absolute; left: -6px; top: -9px; width: 13px; height: 23px; border-right: 2px solid rgba(239,242,229,.42); border-bottom: 2px solid rgba(239,242,229,.36); border-radius: 0 0 65% 0; }
 .item-thumb-incense { border: 1px solid rgba(147,169,171,.74); border-radius: 50%; background-image: radial-gradient(circle at 50% 46%, transparent 0 13%, #04847c 14% 21%, transparent 22% 31%, #08786f 32% 39%, transparent 40% 49%, #07685f 50% 56%, transparent 57%), radial-gradient(circle at 29% 24%, rgba(255,255,255,.45), transparent 20%), linear-gradient(#17242a, #02070a) !important; background-position: center !important; background-size: 100% 100% !important; box-shadow: 0 2px 0 #05080c, 0 0 7px rgba(249,181,67,.34); }
+.placed-item-incense .placed-item-art { width: 70px; height: 70px; margin-top: -8px; border: 0; border-radius: 0; background-color: transparent !important; background-image: var(--incense-asset) !important; background-position: center !important; background-size: contain !important; background-repeat: no-repeat !important; box-shadow: none !important; filter: drop-shadow(0 5px 5px rgba(5,14,18,.58)); }
+.item-thumb-incense { border: 0; border-radius: 0; background-color: transparent !important; background-image: var(--incense-asset) !important; background-position: center !important; background-size: contain !important; background-repeat: no-repeat !important; box-shadow: none; }
 .placed-item-incense .placed-item-art { width: 64px; height: 45px; margin-top: 9px; border-width: 2.5px; box-shadow: 0 4px 0 #05090d, 0 8px 13px rgba(5,14,18,.68), inset 0 2px 0 rgba(226,246,245,.46), inset 0 -4px 6px rgba(0,0,0,.94) !important; }
 .placed-item-incense .incense-realistic { left: 0; top: -8px; width: 72px; height: 72px; transform: perspective(110px) rotateX(24deg) rotateZ(-5deg); transform-origin: 50% 58%; filter: drop-shadow(0 5px 4px rgba(5,14,18,.72)); }
 .placed-item-incense .incense-plate-rim { stroke-width: 1.9; }
@@ -301,6 +303,8 @@ button { font: inherit; }
 .placed-item-incense .incense-coil-path { stroke-width: 5.1; transform: translateY(-1px) scaleY(.8); transform-origin: center; }
 .placed-item-incense .incense-smoke { left: 45px; top: -24px; transform-origin: 100% 100%; }
 @media (max-width: 420px) { .placed-item-incense .placed-item-art { width: 60px; height: 43px; }.placed-item-incense .incense-realistic { left: 1px; width: 70px; height: 70px; } }
+.placed-item-incense .placed-item-art { width: 70px; height: 70px; margin-top: -8px; border: 0 !important; border-radius: 0; box-shadow: none !important; }
+@media (max-width: 420px) { .placed-item-incense .placed-item-art { width: 66px; height: 66px; margin-top: -6px; } }
 @keyframes incense-smoke-rise { 0%, 100% { opacity: .34; transform: translateY(5px) rotate(-8deg); } 52% { opacity: .82; transform: translate(4px, -7px) rotate(8deg); } }
 @keyframes incense-ember-pulse { from { opacity: .38; transform: scale(.82); } to { opacity: .82; transform: scale(1.12); } }
 .placed-item-daruma .placed-item-art { animation: daruma-travel-bob .48s ease-in-out infinite alternate; }

@@ -69,10 +69,10 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain("@keyframes wind-chime-sway");
     expect(styleSource).toContain("backdrop-filter: brightness(.96) contrast(1.08) saturate(1.02)");
     expect(styleSource).toContain(".stage-dusk .stage-contrast-overlay");
-    expect(componentSource).toContain('className="incense-realistic"');
+    expect(componentSource).toContain('const INCENSE_ASSET = "/manus-storage/naika-incense-reference-cutout_eeafc68a.png"');
     expect(componentSource).toContain('className="incense-smoke"');
     expect(styleSource).toContain(".incense-smoke");
-    expect(styleSource).toContain("#04080d");
+    expect(styleSource).toContain("background-image: var(--incense-asset) !important");
   });
 
   it("歯車を表示せず、風鈴タップで音量設定を開きランダムなチリン音を再生する", () => {
@@ -210,16 +210,11 @@ describe("蚊と小判の描画仕様", () => {
   });
 
   it("アイテムの残り時間は右下の小型表示で、線香本体は立体的な静的オブジェクトとして表示する", () => {
-    expect(componentSource).toContain('className="incense-realistic"');
+    expect(componentSource).toContain('"--incense-asset": `url(${INCENSE_ASSET})`');
     expect(styleSource).toContain("top: auto; right: 2px; bottom: -4px");
     expect(styleSource).toContain("width: 18px; height: 18px");
-    expect(styleSource).toContain(".incense-plate-rim");
-    expect(styleSource).toContain(".incense-coil-path");
-    expect(componentSource).toContain('className="incense-metal-stand"');
-    expect(styleSource).toContain(".incense-metal-stand");
-    expect(styleSource).toContain(".incense-ember-core");
-    expect(styleSource).toContain("perspective(110px) rotateX(24deg) rotateZ(-5deg)");
-    expect(styleSource).toContain("width: 64px; height: 45px");
+    expect(styleSource).toContain("width: 70px; height: 70px");
+    expect(styleSource).toContain("background-size: contain !important");
     expect(sceneSource).not.toContain("item.mesh.rotation.z += 0.015");
     expect(sceneSource).toContain("private readonly itemPreviewId: ItemId");
     expect(sceneSource).toContain("private readonly itemPreviewHold");
