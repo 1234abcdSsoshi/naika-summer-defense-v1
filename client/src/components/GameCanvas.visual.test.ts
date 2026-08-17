@@ -43,6 +43,11 @@ describe("蚊と小判の描画仕様", () => {
     expect(stageSource).toContain('/manus-storage/naika-room-background-night-japanese-zen_c63f1fce.png');
     expect(componentSource).toContain('const stage = STAGE_PRESENTATIONS[difficulty]');
     expect(componentSource).toContain('url(${stage.background})');
+    expect(componentSource).toContain('stage-life-fan');
+    expect(componentSource).toContain('stage-life-drink');
+    expect(styleSource).toContain('background-size: 100% 100%');
+    expect(styleSource).toContain('bottom: 27%');
+    expect(styleSource).toContain('bottom: 28%');
     expect(sceneSource).toContain('STAGE_PRESENTATIONS.night.background');
     expect(componentSource).not.toContain('className="moon-disc"');
     expect(styleSource).not.toContain('.moon-disc {');

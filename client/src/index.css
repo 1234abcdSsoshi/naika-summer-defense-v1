@@ -205,10 +205,22 @@ button { font: inherit; }
   position: absolute;
   inset: 0;
   z-index: 0;
-  background-size: cover;
+  background-size: 100% 100%;
   background-position: center;
   transform: rotate(180deg);
 }
+.stage-life-prop { pointer-events: none; position: absolute; z-index: 1; }
+.stage-life-fan { left: 7%; bottom: 27%; width: 44px; height: 58px; opacity: .72; filter: drop-shadow(0 3px 3px rgba(12,18,20,.38)); }
+.stage-life-fan::before { content: ""; position: absolute; left: 3px; top: 0; width: 38px; height: 38px; border: 2px solid rgba(40,56,55,.82); border-radius: 50%; background: repeating-conic-gradient(from 14deg, rgba(224,232,219,.5) 0 7deg, transparent 7deg 42deg), radial-gradient(circle, rgba(52,74,70,.72) 0 10%, rgba(180,193,178,.48) 11% 14%, rgba(38,55,53,.58) 15% 18%, transparent 19%); box-shadow: inset 0 0 0 3px rgba(235,236,211,.22); }
+.stage-life-fan::after { content: ""; position: absolute; left: 19px; top: 36px; width: 7px; height: 19px; border-radius: 4px; background: rgba(46,63,59,.74); box-shadow: -10px 17px 0 -2px rgba(39,55,51,.76), 10px 17px 0 -2px rgba(39,55,51,.76); }
+.stage-life-drink { right: 8%; bottom: 28%; width: 25px; height: 38px; opacity: .82; filter: drop-shadow(0 3px 3px rgba(12,18,20,.36)); }
+.stage-life-drink::before { content: ""; position: absolute; left: 4px; top: 6px; width: 17px; height: 27px; border: 1px solid rgba(233,230,199,.66); border-radius: 3px 3px 6px 6px; background: linear-gradient(90deg, rgba(82,135,111,.62), rgba(225,206,126,.66) 48%, rgba(56,113,93,.56)); box-shadow: inset 0 5px 0 rgba(238,240,204,.28); }
+.stage-life-drink::after { content: ""; position: absolute; left: 8px; top: 1px; width: 10px; height: 7px; border: 1px solid rgba(238,237,211,.68); border-bottom: 0; border-radius: 50% 50% 0 0; }
+.stage-life-drink i { position: absolute; z-index: 1; left: 11px; top: -3px; width: 2px; height: 13px; background: rgba(236,229,186,.72); transform: rotate(7deg); }
+.stage-morning .stage-life-fan { opacity: .66; }
+.stage-dusk .stage-life-fan { opacity: .72; filter: sepia(.12) drop-shadow(0 3px 3px rgba(42,24,18,.42)); }
+.stage-night .stage-life-fan { opacity: .58; filter: saturate(.72) brightness(.78) drop-shadow(0 3px 3px rgba(7,16,29,.5)); }
+.stage-night .stage-life-drink { filter: saturate(.7) brightness(.72) drop-shadow(0 3px 3px rgba(7,16,29,.5)); }
 .stage-atmosphere { pointer-events: none; position: absolute; z-index: 2; inset: 0; overflow: hidden; }
 .stage-atmosphere::before, .stage-atmosphere::after { content: ""; position: absolute; pointer-events: none; inset: 0; opacity: 0; }
 .stage-dusk .stage-atmosphere::before { opacity: .9; background: radial-gradient(ellipse 72% 34% at 50% 48%, rgba(255, 186, 106, .34) 0, rgba(255, 111, 53, .16) 34%, transparent 72%), linear-gradient(180deg, rgba(255, 170, 89, .12), transparent 46%); mix-blend-mode: screen; }
