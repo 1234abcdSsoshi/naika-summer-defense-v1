@@ -57,11 +57,12 @@ describe("蚊と小判の描画仕様", () => {
     expect(sceneSource).toContain("texture.vOffset = 1");
   });
 
-  it("朝・夕暮れに風鈴と雲の背景演出を表示し、背景の視認性を補正する", () => {
+  it("朝・夕暮れは風鈴だけを背景演出として表示し、背景の視認性を補正する", () => {
     expect(componentSource).toContain('className={`stage-atmosphere ${difficulty === "night" ? "is-night" : ""}`}');
     expect(componentSource).toContain('className={`wind-chime-control ${chimePulse ? "is-ringing" : ""}`}');
-    expect(componentSource).toContain('className="stage-cloud stage-cloud-one"');
-    expect(styleSource).toContain("@keyframes stage-cloud-drift");
+    expect(componentSource).not.toContain('className="stage-cloud');
+    expect(styleSource).not.toContain("stage-cloud-drift");
+    expect(styleSource).not.toContain(".stage-cloud {");
     expect(styleSource).toContain("@keyframes wind-chime-sway");
     expect(styleSource).toContain("backdrop-filter: brightness(.84) contrast(1.16) saturate(.92)");
     expect(styleSource).toContain(".stage-dusk .stage-contrast-overlay");
