@@ -39,8 +39,8 @@ describe("蚊と小判の描画仕様", () => {
     expect(stageSource).toContain('dusk: {');
     expect(stageSource).toContain('night: {');
     expect(stageSource).toContain('/manus-storage/naika-room-background-morning-tatami-wide_b31d6bd6.png');
-    expect(stageSource).toContain('/manus-storage/naika-room-background-dusk-lived-in_cf056649.png');
-    expect(stageSource).toContain('/manus-storage/naika-room-background-night-lived-in_154f4a91.png');
+    expect(stageSource).toContain('/manus-storage/naika-room-background-dusk-japanese-zen_712ebe6a.png');
+    expect(stageSource).toContain('/manus-storage/naika-room-background-night-japanese-zen_c63f1fce.png');
     expect(componentSource).toContain('const stage = STAGE_PRESENTATIONS[difficulty]');
     expect(componentSource).toContain('url(${stage.background})');
     expect(sceneSource).toContain('STAGE_PRESENTATIONS.night.background');
