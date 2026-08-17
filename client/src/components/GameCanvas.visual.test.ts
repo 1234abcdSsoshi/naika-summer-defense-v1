@@ -58,8 +58,8 @@ describe("蚊と小判の描画仕様", () => {
   });
 
   it("朝・夕暮れに風鈴と雲の背景演出を表示し、背景の視認性を補正する", () => {
-    expect(componentSource).toContain('className={`stage-atmosphere ${difficulty === "night" ? "is-hidden" : ""}`}');
-    expect(componentSource).toContain('className="wind-chime"');
+    expect(componentSource).toContain('className={`stage-atmosphere ${difficulty === "night" ? "is-night" : ""}`}');
+    expect(componentSource).toContain('className={`wind-chime-control ${chimePulse ? "is-ringing" : ""}`}');
     expect(componentSource).toContain('className="stage-cloud stage-cloud-one"');
     expect(styleSource).toContain("@keyframes stage-cloud-drift");
     expect(styleSource).toContain("@keyframes wind-chime-sway");
@@ -67,20 +67,30 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain(".stage-dusk .stage-contrast-overlay");
   });
 
-  it("歯車設定からBGM音量を調整できる", () => {
-    expect(componentSource).toContain('className="settings-button"');
+  it("歯車を表示せず、風鈴タップで音量設定を開きランダムなチリン音を再生する", () => {
+    expect(componentSource).not.toContain('className="settings-button"');
+    expect(componentSource).toContain('className={`wind-chime-control ${chimePulse ? "is-ringing" : ""}`}');
+    expect(componentSource).toContain('aria-label="音量設定を開く"');
+    expect(componentSource).toContain("unlockWindChimeAudio(); playWindChime();");
+    expect(componentSource).toContain("7200 + Math.random() * 5800");
+    expect(componentSource).toContain("0.065 * audioSettings.sfx");
+    expect(componentSource).toContain('className="settings-panel wind-chime-settings-panel"');
+    expect(styleSource).toContain(".wind-chime-control");
+    expect(styleSource).toContain(".wind-chime-settings-panel");
+  });
+
+  it("風鈴タップからBGM音量を調整できる", () => {
+    expect(componentSource).toContain('className={`wind-chime-control ${chimePulse ? "is-ringing" : ""}`}');
     expect(componentSource).toContain('aria-label="音量設定を開く"');
     expect(componentSource).toContain('aria-expanded={showAudioSettings}');
     expect(componentSource).toContain('has("settings-check")');
-    expect(componentSource).toContain('className="settings-panel"');
+    expect(componentSource).toContain('className="settings-panel wind-chime-settings-panel"');
     expect(componentSource).toContain('aria-label="BGM音量"');
     expect(componentSource).toContain('Math.round(audioSettings.bgm * 100)');
-    expect(styleSource).toContain(".settings-control");
-    expect(styleSource).toContain(".settings-button");
+    expect(styleSource).toContain(".wind-chime-control");
     expect(styleSource).toContain(".settings-panel");
-    expect(styleSource).toContain("top: max(96px, calc(env(safe-area-inset-top) + 78px))");
-    expect(styleSource).toContain("top: max(92px, calc(env(safe-area-inset-top) + 74px))");
-    expect(styleSource).toContain("width: 30px; height: 30px");
+    expect(styleSource).toContain(".wind-chime-settings-panel");
+    expect(styleSource).not.toContain('>⚙<');
   });
 
   it("蚊の出現時にカラン音を追加せず、カラン音を抑えたBGMを使う", () => {
