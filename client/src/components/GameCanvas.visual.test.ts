@@ -50,7 +50,10 @@ describe("蚊と小判の描画仕様", () => {
 
   it("全ステージの背景を180度回転して表示する", () => {
     expect(componentSource).toContain('className="stage-background"');
-    expect(styleSource).toContain("transform: rotate(180deg)");
+    expect(styleSource).toContain('transform: rotate(180deg)');
+    expect(styleSource).toContain('.stage-morning .stage-background');
+    expect(styleSource).toContain('.stage-night .stage-background');
+    expect(styleSource).toContain('background-size: 100% 100%');
     expect(sceneSource).toContain("texture.uScale = -1");
     expect(sceneSource).toContain("texture.vScale = -1");
     expect(sceneSource).toContain("texture.uOffset = 1");

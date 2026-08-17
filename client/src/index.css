@@ -209,6 +209,12 @@ button { font: inherit; }
   background-position: center;
   transform: rotate(180deg);
 }
+/* 添付参考画面の縦構図：窓・縁側を約45%、畳のプレイ領域を約55%に見せる。 */
+.stage-morning .stage-background,
+.stage-night .stage-background {
+  background-size: 100% 100%;
+  background-position: center;
+}
 .stage-atmosphere { pointer-events: none; position: absolute; z-index: 2; inset: 0; overflow: hidden; }
 .stage-atmosphere.is-night .stage-contrast-overlay { background: transparent; backdrop-filter: none; }
 .stage-contrast-overlay { position: absolute; inset: 0; display: block; background: rgba(7, 20, 31, .13); backdrop-filter: brightness(.84) contrast(1.16) saturate(.92); }
