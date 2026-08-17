@@ -348,7 +348,10 @@ describe("蚊と小判の描画仕様", () => {
   it("不要な命中・手動回収案内を表示せず、カエルは半分の間隔で捕食し、蚊を最前面へ描画する", () => {
     expect(sceneSource).not.toContain('"命中！"');
     expect(sceneSource).not.toContain('"指先で回収 +1"');
-    expect(sceneSource).toContain("item.nextActionAt = this.now + 0.85");
+    expect(sceneSource).toContain("const FROG_CAPTURE_INTERVAL = 0.2");
+    expect(sceneSource).toContain("item.nextActionAt = this.now + FROG_CAPTURE_INTERVAL");
+    expect(sceneSource).toContain("const FROG_TONGUE_CYCLE_MS = 180");
+    expect(styleSource).toContain("frog-3d-strike .18s");
     expect(styleSource).toContain(".enemy-dom-layer { pointer-events: none; position: absolute; z-index: 6;");
     expect(styleSource).toContain(".koban-dom-layer { pointer-events: none; position: absolute; z-index: 4;");
     expect(styleSource).toContain(".placed-item-dom-layer { pointer-events: none; position: absolute; z-index: 3;");

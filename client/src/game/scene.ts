@@ -147,6 +147,9 @@ const ITEM_RUNTIME: Record<ItemId, { duration: number | null; range: number; ton
   frog: { duration: 20, range: 1.7, tone: "#88b76d" },
   daruma: { duration: 12, range: 2.25, tone: "#cc5c4c" },
 };
+const FROG_CAPTURE_INTERVAL = 0.2;
+const FROG_TONGUE_DELAY_MS = 35;
+const FROG_TONGUE_CYCLE_MS = 180;
 
 const MOSQUITO_INFO: Record<MosquitoType, { hp: number; speed: number; score: number; coin: number; color: Color3 }> = {
   small: { hp: 1, speed: 1.15, score: 100, coin: 1, color: Color3.FromHexString("#1D1B22") },
@@ -709,7 +712,7 @@ class GameWorld {
             .filter((mosquito) => (mosquito.state === "approaching" || mosquito.state === "feeding") && distance(item.x, item.y, mosquito.x, mosquito.y) < ITEM_RUNTIME.frog.range)
             .sort((a, b) => distance(a.x, a.y, item.x, item.y) - distance(b.x, b.y, item.x, item.y))[0];
           if (target) {
-            item.nextActionAt = this.now + 0.85;
+            item.nextActionAt = this.now + FROG_CAPTURE_INTERVAL;
             this.emitItemActivation(item, "trigger");
             const tongue = { itemX: item.x, itemY: item.y, targetX: target.x, targetY: target.y, nonce: this.frogTongueNonce++, phase: "aim" as const };
             const dx = target.x - item.x;
@@ -722,15 +725,15 @@ class GameWorld {
             target.captureTargetX = item.x + (dx / length) * 0.25;
             target.captureTargetY = item.y + (dy / length) * 0.25;
             this.callbacks.onFrogTongue(tongue);
-            const tongueDelay = this.frogPreviewPull ? 0 : this.frogPreviewSlow ? 10000 : 110;
+            const tongueDelay = this.frogPreviewPull ? 0 : this.frogPreviewSlow ? 10000 : FROG_TONGUE_DELAY_MS;
             window.setTimeout(() => this.callbacks.onFrogTongue({ ...tongue, phase: "pull" }), tongueDelay);
-            window.setTimeout(() => this.callbacks.onFrogTongue(null), this.frogPreviewPull ? 60000 : tongueDelay + 410);
+            window.setTimeout(() => this.callbacks.onFrogTongue(null), this.frogPreviewPull ? 60000 : FROG_TONGUE_CYCLE_MS);
             item.mesh.scaling.set(0.84, 1.26, 1);
             item.mesh.rotation.z = Math.atan2(dy, dx) * 0.1;
             window.setTimeout(() => {
               item.mesh.scaling.setAll(1);
               item.mesh.rotation.z = 0;
-            }, 440);
+            }, FROG_TONGUE_CYCLE_MS);
           }
         }
       }
