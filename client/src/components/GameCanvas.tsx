@@ -233,7 +233,8 @@ export default function GameCanvas() {
   };
 
   return (
-    <main className={`night-shell stage-${difficulty}`} style={{ backgroundImage: `${stage.overlay}, url(${stage.background})` }}>
+    <main className={`night-shell stage-${difficulty}`}>
+      <div className="stage-background" aria-hidden="true" style={{ backgroundImage: `${stage.overlay}, url(${stage.background})` }} />
       <audio ref={bgmRef} src={phase === "title" ? TITLE_BGM : stage.gameplayBgm} loop preload="auto" />
       <canvas ref={canvasRef} onPointerMove={updatePlacementPreview} className="game-canvas" aria-label="内蚊のゲーム画面" style={{ touchAction: "none" }} />
       <div className="paper-grain" aria-hidden="true" />

@@ -315,7 +315,7 @@ class GameWorld {
     if (this.running) return;
     this.difficulty = difficulty;
     this.roomLayer.texture?.dispose();
-    this.roomLayer.texture = new Texture(STAGE_PRESENTATIONS[difficulty].background, this.scene, true, false);
+    this.roomLayer.texture = this.createOrientedBackgroundTexture(STAGE_PRESENTATIONS[difficulty].background);
     this.emitSkill(true);
     this.emitHud(`${DIFFICULTY_PROFILES[difficulty].label}を選択`);
   };
@@ -543,7 +543,7 @@ class GameWorld {
 
   private spawnBeneficial() {
     const stage = STAGE_PRESENTATIONS[this.difficulty];
-    const interval = this.difficulty === "morning" ? 10 : this.difficulty === "dusk" ? 12 + this.random() * 3 : 12 + this.random() * 5;
+    const interval = this.difficulty === "morning" ? 10 : this.difficulty === "dusk" ? 12 + this.random() * 3 : 12 + this.random() * 6;
     this.nextBeneficialAt = this.now + interval;
     const type = stage.beneficial;
     const beneficial: Beneficial = {
@@ -1074,6 +1074,15 @@ class GameWorld {
     this.vfxs.push({ kind, bornAt: this.now, duration: kind === "damage" ? 0.38 : 0.26, mesh: root });
   }
 
+  private createOrientedBackgroundTexture(url: string) {
+    const texture = new Texture(url, this.scene, true, false);
+    texture.uScale = -1;
+    texture.vScale = -1;
+    texture.uOffset = 1;
+    texture.vOffset = 1;
+    return texture;
+  }
+
   private makeSprite(name: string, url: string, size: number) {
     const plane = MeshBuilder.CreatePlane(name, { width: size, height: size }, this.scene);
     const material = new StandardMaterial(`${name}-material`, this.scene);
@@ -1278,6 +1287,13 @@ export async function createGameScene(engine: Engine, canvas: HTMLCanvasElement,
   camera.orthoBottom = -7;
   camera.setTarget(Vector3.Zero());
   const roomLayer = new Layer("room-background", STAGE_PRESENTATIONS.night.background, scene, true);
+  const roomTexture = roomLayer.texture as Texture | null;
+  if (roomTexture) {
+    roomTexture.uScale = -1;
+    roomTexture.vScale = -1;
+    roomTexture.uOffset = 1;
+    roomTexture.vOffset = 1;
+  }
 
   const vignette = MeshBuilder.CreatePlane("indigo-vignette", { width: 8, height: 14 }, scene);
   vignette.position.z = -0.1;

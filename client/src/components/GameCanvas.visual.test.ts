@@ -48,6 +48,15 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).not.toContain('.moon-disc {');
   });
 
+  it("全ステージの背景を180度回転して表示する", () => {
+    expect(componentSource).toContain('className="stage-background"');
+    expect(styleSource).toContain("transform: rotate(180deg)");
+    expect(sceneSource).toContain("texture.uScale = -1");
+    expect(sceneSource).toContain("texture.vScale = -1");
+    expect(sceneSource).toContain("texture.uOffset = 1");
+    expect(sceneSource).toContain("texture.vOffset = 1");
+  });
+
   it("歯車設定からBGM音量を調整できる", () => {
     expect(componentSource).toContain('className="settings-button"');
     expect(componentSource).toContain('aria-label="音量設定を開く"');
@@ -103,6 +112,7 @@ describe("蚊と小判の描画仕様", () => {
     expect(sceneSource).toContain('onBeneficials: (beneficials: BeneficialView[]) => void');
     expect(sceneSource).toContain('onSkill: (skill: SkillView) => void');
     expect(sceneSource).toContain('private spawnBeneficial()');
+    expect(sceneSource).toContain('this.difficulty === "morning" ? 10 : this.difficulty === "dusk" ? 12 + this.random() * 3 : 12 + this.random() * 6');
     expect(sceneSource).toContain('this.skillCharge = Math.min(1, this.skillCharge + 0.24)');
     expect(sceneSource).toContain('this.skillCharge = Math.min(1, this.skillCharge + safeDelta / 60)');
     expect(sceneSource).toContain('activateSkill = () =>');
