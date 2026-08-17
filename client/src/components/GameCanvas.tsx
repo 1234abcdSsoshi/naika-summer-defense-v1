@@ -251,6 +251,11 @@ export default function GameCanvas() {
     handleRef.current?.startRun();
   };
   const selectItem = (item: ItemId) => {
+    if (hud.placement === item) {
+      handleRef.current?.cancelPlacement();
+      setPlacementPreview(null);
+      return;
+    }
     setPlacementPreview({ item, x: -1.55, y: -0.45 });
     handleRef.current?.purchase(item);
   };
@@ -397,7 +402,7 @@ export default function GameCanvas() {
           <dl><div><dt>最高点</dt><dd>{result.best.toLocaleString()}</dd></div><div><dt>退けた蚊</dt><dd>{result.kills}</dd></div><div><dt>守れた時間</dt><dd>{result.duration}秒</dd></div></dl>
           {result.analytics && <div className="analysis-slip"><p>今夜の記録 <span>{DIFFICULTY_PROFILES[result.analytics.difficulty].shortLabel}</span></p><div><b>命中率 {Math.round(result.analytics.hitRate * 100)}%</b><b>被弾 {result.analytics.damageTaken}</b><b>脅威 {result.analytics.averageThreat.toFixed(2)}x</b></div><small>端末内イベント {eventSummary.events}件／完走 {eventSummary.completedRuns}回</small></div>}
           <button className="start-button" onClick={start}>もう一度、守る <span>↻</span></button>
-          <button className="quiet-button" onClick={returnToTitle}>縁側へ戻る</button>
+          <button type="button" className="quiet-button result-home-button" onClick={returnToTitle} aria-label="ホームへ戻る">ホームへ戻る</button>
         </section>
       )}
     </main>

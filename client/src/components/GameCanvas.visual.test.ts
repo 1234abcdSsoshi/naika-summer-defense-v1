@@ -278,6 +278,14 @@ describe("蚊と小判の描画仕様", () => {
     expect(sceneSource).toContain("if (this.placementPreviewCheck) this.placement = this.placementPreviewCheck");
   });
 
+  it("選択中の同じアイテムを再タップすると設置選択とプレビューを解除する", () => {
+    expect(componentSource).toContain("if (hud.placement === item)");
+    expect(componentSource).toContain("handleRef.current?.cancelPlacement()");
+    expect(componentSource).toContain("setPlacementPreview(null)");
+    expect(sceneSource).toContain("cancelPlacement: () => void");
+    expect(sceneSource).toContain('this.emitHud("設置選択を解除")');
+  });
+
   it("穏やかな放射状光粒は招き猫の実効果発動時だけに表示する", () => {
     expect(componentSource).toContain('activation.item === "cat" && activation.kind === "trigger"');
     expect(componentSource).toContain('data-activation-source="cat"');
@@ -288,6 +296,14 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain(".cat-radiance-mote");
     expect(styleSource).toContain("@keyframes cat-radiance-mote");
     expect(styleSource).not.toContain(".activation-washi");
+  });
+
+  it("ゲームオーバー結果画面からホームへ戻れるボタンを表示し、既存の再プレイ導線を維持する", () => {
+    expect(componentSource).toContain('className="quiet-button result-home-button"');
+    expect(componentSource).toContain('aria-label="ホームへ戻る"');
+    expect(componentSource).toContain("onClick={returnToTitle}");
+    expect(componentSource).toContain("もう一度、守る");
+    expect(styleSource).toContain(".result-home-button");
   });
 
   it("内蚊アイコンは継続確認を開き、いいえでステージ選択へ戻れる", () => {

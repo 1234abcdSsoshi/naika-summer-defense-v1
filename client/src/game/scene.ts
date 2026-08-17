@@ -76,6 +76,7 @@ export type GameHandle = {
   startRun: () => void;
   abandonRun: () => void;
   purchase: (item: ItemId) => void;
+  cancelPlacement: () => void;
   setDifficulty: (difficulty: DifficultyId) => void;
   retry: () => void;
   setPaused: (paused: boolean) => void;
@@ -436,6 +437,12 @@ class GameWorld {
       .sort((a, b) => distance(a.x, a.y, 0, this.playerY) - distance(b.x, b.y, 0, this.playerY))[0];
     if (mosquito) this.hitMosquito(mosquito);
     else this.playTone(140, 0.035, "sine", 0.025);
+  };
+
+  cancelPlacement = () => {
+    if (!this.running || !this.placement) return;
+    this.placement = null;
+    this.emitHud("設置選択を解除");
   };
 
   purchase = (item: ItemId) => {
@@ -1319,6 +1326,7 @@ export async function createGameScene(engine: Engine, canvas: HTMLCanvasElement,
     startRun: world.startRun,
     abandonRun: world.abandonRun,
     purchase: world.purchase,
+    cancelPlacement: world.cancelPlacement,
     setDifficulty: world.setDifficulty,
     retry: world.retry,
     setPaused: world.setPaused,
