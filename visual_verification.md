@@ -1,5 +1,5 @@
 # Visual Verification Notes
 
-## 2026-08-18 — Natural night-stage moonlight
+## 2026-08-18 — Night-stage moonlight refinement
 
-The 375×812 `?visual-check` view confirms that the white circular glow behind the sleeper is absent. The exterior opening retains a soft, low-opacity moonlit gradient, while a clipped trapezoidal band suggests moonlight entering the room without introducing another visible circular light source. The tatami, shoji, HUD, enemy, koban, sleeper, and item tray retain their existing treatment.
+The 375×812 `?visual-check` view confirms that the former bright circular glow at the center of the tatami has been softened and lifted toward the upper interior. Mosquitoes, koban, the sleeper, defensive-item tray, and HUD remain visible against the dimmer night-stage backdrop.

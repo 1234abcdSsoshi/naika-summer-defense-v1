@@ -78,22 +78,10 @@ describe("蚊と小判の描画仕様", () => {
   });
 
   it("夜ステージの月明かりは上方へ寄せ、中央の白い照明を抑える", () => {
-    expect(styleSource).toContain("radial-gradient(circle at 51% 40%, rgba(255, 255, 226, .075)");
-    expect(styleSource).toContain("radial-gradient(ellipse 58% 27% at 52% 43%, rgba(127, 177, 244, .028)");
-    expect(styleSource).toContain("radial-gradient(circle at 51% 40%, rgba(255, 255, 236, .055)");
-    expect(styleSource).toContain("backdrop-filter: brightness(.58) contrast(1.14) saturate(.85)");
+    expect(styleSource).toContain("radial-gradient(circle at 51% 40%, rgba(255, 255, 226, .15)");
+    expect(styleSource).toContain("radial-gradient(ellipse 64% 32% at 52% 43%, rgba(127, 177, 244, .07)");
+    expect(styleSource).toContain("radial-gradient(circle at 51% 40%, rgba(255, 255, 236, .12)");
     expect(styleSource).not.toContain("radial-gradient(circle at 51% 58%, rgba(255, 255, 226, .24)");
-  });
-
-  it("夜ステージでは窓外の月と夜空だけに月光ハローを限定する", () => {
-    expect(componentSource).toContain('{difficulty === "night" && <span className="night-sky-moonlight" />}');
-    expect(componentSource).toContain('{difficulty === "night" && <span className="night-room-moonbeam" />}');
-    expect(styleSource).toContain(".night-sky-moonlight { position: absolute; left: 18%; top: 61%; width: 64%; height: 18%");
-    expect(styleSource).toContain("clip-path: polygon(6% 0, 94% 0, 100% 100%, 0 100%)");
-    expect(styleSource).toContain("linear-gradient(148deg, transparent 0 33%, rgba(202, 222, 255, .11)");
-    expect(styleSource).toContain(".night-room-moonbeam { position: absolute; left: 16%; top: 47%; width: 68%; height: 15%");
-    expect(styleSource).toContain("clip-path: polygon(0 100%, 100% 100%, 66% 0, 38% 0)");
-    expect(styleSource).not.toContain("radial-gradient(circle at 62% 27%, rgba(255, 255, 235, .9)");
   });
 
   it("歯車を表示せず、風鈴タップで音量設定を開きランダムなチリン音を再生する", () => {
