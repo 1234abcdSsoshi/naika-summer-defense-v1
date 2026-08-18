@@ -203,14 +203,16 @@ describe("蚊と小判の描画仕様", () => {
 
   it("益虫を捕獲してスキルを蓄積し、ステージ固有の像モチーフで全蚊を撃破する", () => {
     expect(stageSource).toContain('cicada: 0');
-    expect(stageSource).toContain('firefly: 1');
-    expect(stageSource).toContain('moth: 2');
+    expect(stageSource).toContain('dragonfly: 1');
+    expect(stageSource).toContain('beetle: 2');
     expect(stageSource).toContain('buddha: 0');
     expect(stageSource).toContain('fujin: 1');
     expect(stageSource).toContain('raijin: 2');
     expect(sceneSource).toContain('onBeneficials: (beneficials: BeneficialView[]) => void');
     expect(sceneSource).toContain('onSkill: (skill: SkillView) => void');
     expect(sceneSource).toContain('private spawnBeneficial()');
+    expect(sceneSource).toContain('private readonly beneficialCheck = new URLSearchParams(window.location.search).has("beneficial-check")');
+    expect(sceneSource).toContain('else if (this.beneficialCheck)');
     expect(sceneSource).toContain('this.difficulty === "morning" ? 12 : this.difficulty === "dusk" ? 12 + this.random() * 3 : 12 + this.random() * 6');
     expect(sceneSource).toContain('const captureCharge = beneficial.type === "cicada" ? 0.2 : 0.24');
     expect(sceneSource).toContain('this.skillCharge = Math.min(1, this.skillCharge + captureCharge)');
@@ -219,13 +221,19 @@ describe("蚊と小判の描画仕様", () => {
     expect(sceneSource).toContain('this.killMosquito(mosquito, false, "skill")');
     expect(componentSource).toContain('onBeneficials: setBeneficials');
     expect(componentSource).toContain('onSkill: setSkill');
-    expect(componentSource).toContain('className={`beneficial-dom beneficial-${beneficial.type}`}');
+    expect(componentSource).toContain('className={`beneficial-dom beneficial-${beneficial.type} ${sprite ? "has-beneficial-sprite" : ""}`}');
+    expect(componentSource).toContain('dragonfly: "/manus-storage/naika-beneficial-dragonfly_035e0bf2.png"');
+    expect(componentSource).toContain('beetle: "/manus-storage/naika-beneficial-rhinoceros-beetle_b6e64210.png"');
+    expect(componentSource).toContain('params.has("beneficial-check")');
     expect(componentSource).toContain('className={`skill-core skill-core-${difficulty} ${displayedSkill.ready ? "is-ready" : ""}');
     expect(componentSource).toContain('handleRef.current?.activateSkill()');
     expect(componentSource).toContain('const SKILL_VFX_ASSETS: Record<DifficultyId, string>');
     expect(componentSource).toContain('className={`skill-cast-vfx skill-cast-vfx-${difficulty} ${skillCastPreview ? "is-preview" : ""}`}');
     expect(componentSource).toContain('skill-cast-check');
     expect(styleSource).toContain('.beneficial-dom-layer');
+    expect(styleSource).toContain('.beneficial-dom.has-beneficial-sprite span');
+    expect(styleSource).toContain('.beneficial-dragonfly');
+    expect(styleSource).toContain('.beneficial-beetle');
     expect(styleSource).toContain('.skill-core');
     expect(styleSource).toContain('.skill-hands');
     expect(styleSource).toContain('.skill-cast-vfx');

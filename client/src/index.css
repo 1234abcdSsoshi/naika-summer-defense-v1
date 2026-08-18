@@ -372,7 +372,9 @@ button { font: inherit; }
 .beneficial-dom-layer { position: absolute; inset: 0; z-index: 7; pointer-events: none; }
 .beneficial-dom { position: absolute; width: 66px; height: 52px; transform: translate(-50%, -50%); animation: beneficial-float 1.2s ease-in-out infinite alternate; }
 .beneficial-dom span { display: block; width: 100%; height: 100%; background-image: var(--beneficial-atlas); background-repeat: no-repeat; background-size: 300% 100%; background-position: calc(var(--beneficial-cell) * -50%) center; filter: drop-shadow(0 1px 2px rgba(10,22,36,.42)); }
-.beneficial-firefly span { filter: drop-shadow(0 0 9px rgba(255,220,108,.9)); }.beneficial-moth span { filter: drop-shadow(0 1px 3px rgba(229,236,243,.5)); }
+.beneficial-dom.has-beneficial-sprite span { background-image: var(--beneficial-sprite); background-size: contain; background-position: center; }
+.beneficial-dragonfly { width: 74px; height: 56px; }.beneficial-dragonfly span { filter: drop-shadow(0 2px 4px rgba(28,100,118,.46)); }
+.beneficial-beetle { width: 62px; height: 62px; }.beneficial-beetle span { filter: drop-shadow(0 3px 5px rgba(8,18,35,.66)); }
 @keyframes beneficial-float { from { transform: translate(-50%, -50%) rotate(-6deg) translateY(-4px); } to { transform: translate(-50%, -50%) rotate(7deg) translateY(5px); } }
 
 .skill-core { position: absolute; top: 27%; left: 50%; z-index: 8; width: 90px; height: 90px; transform: translate(-50%, -50%); pointer-events: auto; }

@@ -204,6 +204,7 @@ class GameWorld {
   private readonly demo = new URLSearchParams(window.location.search).has("demo");
   private readonly inspect = new URLSearchParams(window.location.search).has("inspect");
   private readonly visualCheck = new URLSearchParams(window.location.search).has("visual-check");
+  private readonly beneficialCheck = new URLSearchParams(window.location.search).has("beneficial-check");
   private readonly gameOverPreview = new URLSearchParams(window.location.search).has("game-over-check");
   private readonly gameOverResultPreview = new URLSearchParams(window.location.search).has("game-over-result-check");
   private readonly damageDemoStage = (() => {
@@ -297,6 +298,10 @@ class GameWorld {
       if (!this.darumaPreviewPull && !this.darumaCoinCheck) this.spawnMosquito();
       this.spawnCoin(this.darumaCoinCheck ? -1.12 : -1.25, this.darumaCoinCheck ? -0.45 : 1.55, 1);
       this.nextSpawnAt = Number.POSITIVE_INFINITY;
+    } else if (this.beneficialCheck) {
+      this.spawnBeneficial();
+      this.nextSpawnAt = Number.POSITIVE_INFINITY;
+      this.nextBeneficialAt = Number.POSITIVE_INFINITY;
     } else if (this.gameOverPreview || this.gameOverResultPreview || this.damageDemoStage || this.mosquitoFlowDemo) {
       if (!this.darumaPreviewPull && !this.darumaCoinCheck) this.spawnMosquito();
       this.spawnCoin(this.darumaCoinCheck ? -1.12 : -1.25, this.darumaCoinCheck ? -0.45 : 1.55, 1);
@@ -569,8 +574,8 @@ class GameWorld {
     };
     this.beneficials.push(beneficial);
     if (type === "cicada") this.playCicadaChirp();
-    else if (type === "firefly") this.playTone(940, 0.24, "sine", 0.035);
-    else this.playTone(310, 0.18, "triangle", 0.022);
+    else if (type === "dragonfly") this.playTone(760, 0.16, "triangle", 0.028);
+    else this.playTone(260, 0.2, "sine", 0.026);
     this.emitBeneficialViews(true);
     this.emitHud(`${stage.beneficialLabel}が飛んできた。タップで技が早く溜まる`);
   }
@@ -579,7 +584,8 @@ class GameWorld {
     for (const beneficial of [...this.beneficials]) {
       const age = this.now - beneficial.bornAt;
       beneficial.x += beneficial.vx * delta;
-      beneficial.y += Math.sin(this.now * (beneficial.type === "cicada" ? 7 : 4) + beneficial.drift) * delta * 0.42;
+      const flutter = beneficial.type === "cicada" ? 7 : beneficial.type === "dragonfly" ? 5.5 : 3.2;
+      beneficial.y += Math.sin(this.now * flutter + beneficial.drift) * delta * 0.42;
       if (age > 7 || beneficial.x < -4.3 || beneficial.x > 4.3) this.beneficials = this.beneficials.filter((entry) => entry !== beneficial);
     }
     this.emitBeneficialViews();
@@ -590,7 +596,7 @@ class GameWorld {
     this.beneficials = this.beneficials.filter((entry) => entry !== beneficial);
     const captureCharge = beneficial.type === "cicada" ? 0.2 : 0.24;
     this.skillCharge = Math.min(1, this.skillCharge + captureCharge);
-    this.playTone(beneficial.type === "cicada" ? 780 : beneficial.type === "firefly" ? 1040 : 520, 0.16, "sine", 0.05);
+    this.playTone(beneficial.type === "cicada" ? 780 : beneficial.type === "dragonfly" ? 940 : 520, 0.16, "sine", 0.05);
     this.emitBeneficialViews(true);
     this.emitSkill(true);
     this.emitHud(`${STAGE_PRESENTATIONS[this.difficulty].beneficialLabel}を見つけた。技の気配が高まる`);
