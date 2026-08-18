@@ -345,9 +345,9 @@ export default function GameCanvas() {
         <div className="hud" aria-live="polite">
           <div className="hud-top">
             <button type="button" className="brand-mini brand-menu-button" onClick={openContinuePrompt} aria-label="最初の画面へ戻るか確認する"><img src={BRAND_MARK} alt="" /><span>内蚊</span></button>
+            {phase === "playing" && <div className={`skill-meter skill-meter-${difficulty} ${displayedSkill.ready ? "is-ready" : ""}`} aria-label={`スキルゲージ ${Math.round(displayedSkill.charge * 100)}%`} style={{ "--skill-charge": `${Math.round(displayedSkill.charge * 100)}%` } as CSSProperties}><div className="skill-meter-copy"><span>スキル</span><strong>{displayedSkill.ready ? "発動可能" : `${Math.round(displayedSkill.charge * 100)}%`}</strong></div><div className="skill-meter-track"><i /></div><small>{stage.skillLabel}</small></div>}
             <div className="score-cluster"><span>{stage.shortLabel}の得点</span><strong>{hud.score.toLocaleString()}</strong></div>
           </div>
-          {phase === "playing" && <div className={`skill-meter skill-meter-${difficulty} ${displayedSkill.ready ? "is-ready" : ""}`} aria-label={`スキルゲージ ${Math.round(displayedSkill.charge * 100)}%`} style={{ "--skill-charge": `${Math.round(displayedSkill.charge * 100)}%` } as CSSProperties}><div className="skill-meter-copy"><span>スキル</span><strong>{displayedSkill.ready ? "発動可能" : `${Math.round(displayedSkill.charge * 100)}%`}</strong></div><div className="skill-meter-track"><i /></div><small>{stage.skillLabel}</small></div>}
           <div className="hud-readout">
             <div className="breath-meter"><span>寝息</span><div><i style={{ width: `${displayHealth}%` }} /></div><b>{displayHealth}</b></div>
             <div className="coin-readout"><i className="hud-koban" style={{ "--koban-asset": `url(${KOBAN_ASSET})` } as CSSProperties} aria-label="小判" /><b>{hud.coins}</b></div>

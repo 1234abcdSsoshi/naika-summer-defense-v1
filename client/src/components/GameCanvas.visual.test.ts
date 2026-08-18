@@ -111,6 +111,8 @@ describe("蚊と小判の描画仕様", () => {
 
   it("スキルゲージは上部バーで常時示し、満タン時だけステージ固有画像のスキルボタンを表示する", () => {
     expect(componentSource).toContain('className={`skill-meter skill-meter-${difficulty} ${displayedSkill.ready ? "is-ready" : ""}`}');
+    expect(componentSource).toContain('<button type="button" className="brand-mini brand-menu-button"');
+    expect(componentSource).toContain('<div className="score-cluster">');
     expect(componentSource).toContain('aria-label={`スキルゲージ ${Math.round(displayedSkill.charge * 100)}%`}');
     expect(componentSource).toContain('phase === "playing" && (displayedSkill.ready || displayedSkill.casting)');
     expect(componentSource).toContain('disabled={!displayedSkill.ready}');
@@ -121,8 +123,9 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).toContain('className="skill-button-art"');
     expect(componentSource).not.toContain('className="skill-ring"');
     expect(styleSource).toContain(".skill-core.is-casting { pointer-events: none; }");
-    expect(styleSource).toContain(".skill-meter { width: min(182px, 50vw)");
+    expect(styleSource).toContain(".skill-meter { flex: 0 1 126px; width: min(132px, 36vw)");
     expect(styleSource).toContain(".skill-meter-track i { display: block; width: var(--skill-charge)");
+    expect(styleSource).toContain(".skill-meter small { display: none; }");
     expect(styleSource).toContain(".skill-core { position: absolute; top: 27%; left: 50%");
     expect(styleSource).toContain("transform: translate(-50%, -50%)");
     expect(styleSource).not.toContain(".skill-ring {");

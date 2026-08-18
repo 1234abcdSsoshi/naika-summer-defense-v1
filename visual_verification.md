@@ -1,5 +1,5 @@
 # Visual Verification Notes
 
-## 2026-08-18 — Skill UI redesign
+## 2026-08-18 — Compact skill meter placement
 
-The 375×812 skill-ready views were checked for all three stages. Each stage shows a compact horizontal skill bar in the upper HUD and only reveals its skill button when full. The circular charge ring is absent from the button. Morning uses the Buddha-hand art and amber tone, dusk uses the Fujin art and copper tone, and night uses the Raijin art and silver-blue tone. The header, breath meter, score, wind chime, tatami field, sleeper, and item tray remain operable and visually separated.
+The 375×812 skill-ready view confirms that the compact horizontal skill meter now sits in the top HUD beside the 「内蚊」 brand mark. It no longer occupies a separate lower row, leaves the score and breath meter visible, and retains the full-charge skill button as a separate, conditional control.
