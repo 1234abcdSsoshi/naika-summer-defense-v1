@@ -77,6 +77,13 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain("background-image: var(--incense-asset) !important");
   });
 
+  it("夜ステージの月明かりは上方へ寄せ、中央の白い照明を抑える", () => {
+    expect(styleSource).toContain("radial-gradient(circle at 51% 40%, rgba(255, 255, 226, .15)");
+    expect(styleSource).toContain("radial-gradient(ellipse 64% 32% at 52% 43%, rgba(127, 177, 244, .07)");
+    expect(styleSource).toContain("radial-gradient(circle at 51% 40%, rgba(255, 255, 236, .12)");
+    expect(styleSource).not.toContain("radial-gradient(circle at 51% 58%, rgba(255, 255, 226, .24)");
+  });
+
   it("歯車を表示せず、風鈴タップで音量設定を開きランダムなチリン音を再生する", () => {
     expect(componentSource).not.toContain('className="settings-button"');
     expect(componentSource).toContain("const WIND_CHIME_ASSETS: Record<DifficultyId, string>");
