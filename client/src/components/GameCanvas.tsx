@@ -24,6 +24,11 @@ const SKILL_BUTTON_ASSETS: Record<DifficultyId, string> = {
   dusk: "/manus-storage/naika-skill-button-fujin_169fc135.png",
   night: "/manus-storage/naika-skill-button-raijin_6b7390ec.png",
 };
+const SKILL_VFX_ASSETS: Record<DifficultyId, string> = {
+  morning: "/manus-storage/naika-skill-vfx-buddha_a620e655.png",
+  dusk: "/manus-storage/naika-skill-vfx-fujin_0dfea19c.png",
+  night: "/manus-storage/naika-skill-vfx-raijin_33a2d377.png",
+};
 const SKILL_BUTTON_TONES: Record<DifficultyId, string> = {
   morning: "#e7a83b",
   dusk: "#e07742",
@@ -109,6 +114,7 @@ export default function GameCanvas() {
   const [isGameOverWaking, setIsGameOverWaking] = useState(false);
   const activationPreview = new URLSearchParams(window.location.search).has("activation-check");
   const skillPreview = new URLSearchParams(window.location.search).has("skill-check");
+  const skillCastPreview = new URLSearchParams(window.location.search).has("skill-cast-check");
   const sleeperPreview = new URLSearchParams(window.location.search).get("sleeper");
   const gameOverPreview = new URLSearchParams(window.location.search).has("game-over-check");
   const gameOverResultPreview = new URLSearchParams(window.location.search).has("game-over-result-check");
@@ -118,7 +124,7 @@ export default function GameCanvas() {
   const sleeperState = getSleeperState(displayHealth, phase === "result" || isGameOverWaking);
   const stage = STAGE_PRESENTATIONS[difficulty];
   const activeBgm = phase === "title" ? TITLE_BGM : stage.gameplayBgm;
-  const displayedSkill = skillPreview ? { ...skill, charge: 1, ready: true } : skill;
+  const displayedSkill = skillCastPreview ? { ...skill, charge: 0, motif: stage.skillMotif, ready: false, casting: true } : skillPreview ? { ...skill, charge: 1, ready: true } : skill;
   const catActivations = [
     ...itemActivations.filter((activation) => activation.item === "cat" && activation.kind === "trigger"),
     ...(activationPreview ? placedItems.filter((item) => item.id === "cat").map((item) => ({ key: `activation-preview-${item.key}`, item: item.id, x: item.x, y: item.y, tone: item.tone, kind: "trigger" as const })) : []),
@@ -211,7 +217,7 @@ export default function GameCanvas() {
       handleRef.current = handle;
       engine.runRenderLoop(() => handle.scene.render());
       const params = new URLSearchParams(window.location.search);
-      if (params.has("visual-check") || params.has("skill-check") || params.has("frog-coin-check") || params.has("game-over-check") || params.has("game-over-result-check") || params.has("damage-demo") || params.has("mosquito-flow-demo") || params.has("mosquito-flow-result-demo")) {
+      if (params.has("visual-check") || params.has("skill-check") || params.has("skill-cast-check") || params.has("frog-coin-check") || params.has("game-over-check") || params.has("game-over-result-check") || params.has("damage-demo") || params.has("mosquito-flow-demo") || params.has("mosquito-flow-result-demo")) {
         if (skillStagePreview) handle.setDifficulty(skillStagePreview);
         handle.startRun();
       }
@@ -361,6 +367,7 @@ export default function GameCanvas() {
         </div>
       )}
 
+      {phase === "playing" && displayedSkill.casting && <div className={`skill-cast-vfx skill-cast-vfx-${difficulty} ${skillCastPreview ? "is-preview" : ""}`} aria-label={`${stage.skillLabel}の発動エフェクト`} style={{ "--skill-vfx-art": `url(${SKILL_VFX_ASSETS[difficulty]})`, "--skill-tone": SKILL_BUTTON_TONES[difficulty] } as CSSProperties}><span className="skill-vfx-flash" /><span className="skill-vfx-shockwave" /><span className="skill-vfx-art" /><span className="skill-vfx-particles" /></div>}
       {phase === "playing" && (displayedSkill.ready || displayedSkill.casting) && <div className={`skill-core skill-core-${difficulty} ${displayedSkill.ready ? "is-ready" : ""} ${displayedSkill.casting ? "is-casting" : ""}`} style={{ "--skill-button-art": `url(${SKILL_BUTTON_ASSETS[difficulty]})`, "--skill-tone": SKILL_BUTTON_TONES[difficulty], "--skill-hands": `url(${SKILL_HANDS_ATLAS})`, "--skill-hand-row": `${SKILL_CELL[displayedSkill.motif]}` } as CSSProperties}><button type="button" onClick={() => handleRef.current?.activateSkill()} disabled={!displayedSkill.ready} aria-label={`${stage.skillLabel}を使う`}><span className="skill-button-art" aria-hidden="true" /><span className="skill-button-copy"><small>{stage.shortLabel}の奥義</small><strong>{displayedSkill.ready ? stage.skillLabel : "発動中"}</strong></span></button>{displayedSkill.casting && <div className="skill-hands" aria-label={stage.skillLabel}><i className="skill-hand-left" /><i className="skill-hand-right" /></div>}</div>}
 
       {phase === "playing" && <div className={`game-sleeper-anchor sleeper-state-${sleeperState}`} data-sleeper-state={sleeperState} role="img" aria-label={`中年男性：${sleeperStatusCopy[sleeperState]}`} style={{ "--sleeper-asset": `url(${SLEEPER_ASSET})`, "--pillow-asset": `url(${PILLOW_ASSET})` } as CSSProperties}><span className="sleeper-pillow" aria-hidden="true" /><span className="sleeper-sprite" /><span className="sleeper-bite sleeper-bite-one" /><span className="sleeper-bite sleeper-bite-two" /><span className="sleeper-bite sleeper-bite-three" /><span className="sleeper-bite sleeper-bite-four" /><span className="sleeper-bite sleeper-bite-five" /><span className="sleeper-worry-lines" aria-hidden="true" /><small>{sleeperStatusCopy[sleeperState]}</small></div>}

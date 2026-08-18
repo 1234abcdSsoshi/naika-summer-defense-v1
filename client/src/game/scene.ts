@@ -1168,7 +1168,7 @@ class GameWorld {
     this.startMosquitoBuzz(context);
   }
 
-  private playTone(frequency: number, duration: number, type: OscillatorType, volume: number) {
+  private playTone(frequency: number, duration: number, type: OscillatorType, volume: number, startAfter = 0) {
     const context = this.getAudioContext();
     if (!context) return;
     try {
@@ -1176,11 +1176,37 @@ class GameWorld {
       const gain = context.createGain();
       oscillator.type = type;
       oscillator.frequency.value = frequency;
-      gain.gain.setValueAtTime(volume * this.sfxVolume, context.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + duration);
+      const startAt = context.currentTime + startAfter;
+      gain.gain.setValueAtTime(volume * this.sfxVolume, startAt);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
       oscillator.connect(gain).connect(context.destination);
-      oscillator.start();
-      oscillator.stop(context.currentTime + duration);
+      oscillator.start(startAt);
+      oscillator.stop(startAt + duration);
+    } catch { /* Audio is enhancement only. */ }
+  }
+
+  private playNoiseSweep(duration: number, startFrequency: number, endFrequency: number, volume: number, startAfter = 0) {
+    const context = this.getAudioContext();
+    if (!context) return;
+    try {
+      const startAt = context.currentTime + startAfter;
+      const buffer = context.createBuffer(1, Math.max(1, Math.floor(context.sampleRate * duration)), context.sampleRate);
+      const samples = buffer.getChannelData(0);
+      for (let index = 0; index < samples.length; index += 1) samples[index] = Math.random() * 2 - 1;
+      const source = context.createBufferSource();
+      const filter = context.createBiquadFilter();
+      const gain = context.createGain();
+      source.buffer = buffer;
+      filter.type = "bandpass";
+      filter.Q.value = 0.8;
+      filter.frequency.setValueAtTime(startFrequency, startAt);
+      filter.frequency.exponentialRampToValueAtTime(endFrequency, startAt + duration * 0.76);
+      gain.gain.setValueAtTime(0.0001, startAt);
+      gain.gain.exponentialRampToValueAtTime(volume * this.sfxVolume, startAt + Math.min(0.06, duration * 0.18));
+      gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+      source.connect(filter).connect(gain).connect(context.destination);
+      source.start(startAt);
+      source.stop(startAt + duration);
     } catch { /* Audio is enhancement only. */ }
   }
 
@@ -1205,17 +1231,22 @@ class GameWorld {
 
   private playStageSkillSound(motif: SkillMotif) {
     if (motif === "buddha") {
-      this.playTone(188, 0.52, "sine", 0.09);
-      this.playTone(376, 0.42, "triangle", 0.055);
+      this.playTone(174, 0.88, "sine", 0.14);
+      this.playTone(348, 0.68, "sine", 0.085, 0.03);
+      this.playTone(522, 0.36, "triangle", 0.07, 0.12);
+      this.playNoiseSweep(0.34, 920, 2100, 0.035, 0.1);
       return;
     }
     if (motif === "fujin") {
-      this.playTone(132, 0.62, "sawtooth", 0.045);
-      this.playTone(540, 0.34, "sine", 0.045);
+      this.playNoiseSweep(0.82, 160, 1600, 0.09);
+      this.playTone(126, 0.74, "sawtooth", 0.065, 0.02);
+      this.playTone(612, 0.34, "triangle", 0.07, 0.28);
       return;
     }
-    this.playTone(92, 0.18, "square", 0.08);
-    window.setTimeout(() => this.playTone(62, 0.36, "sawtooth", 0.075), 110);
+    this.playNoiseSweep(0.5, 120, 2800, 0.13);
+    this.playTone(82, 0.6, "sawtooth", 0.12);
+    this.playTone(196, 0.2, "square", 0.09, 0.09);
+    this.playTone(62, 0.48, "sine", 0.09, 0.16);
   }
 
   private playInteractionSfx(source: HTMLAudioElement, volume: number, startAtSeconds = 0) {

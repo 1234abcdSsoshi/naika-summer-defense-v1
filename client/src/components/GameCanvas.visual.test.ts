@@ -208,9 +208,17 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).toContain('className={`beneficial-dom beneficial-${beneficial.type}`}');
     expect(componentSource).toContain('className={`skill-core skill-core-${difficulty} ${displayedSkill.ready ? "is-ready" : ""}');
     expect(componentSource).toContain('handleRef.current?.activateSkill()');
+    expect(componentSource).toContain('const SKILL_VFX_ASSETS: Record<DifficultyId, string>');
+    expect(componentSource).toContain('className={`skill-cast-vfx skill-cast-vfx-${difficulty} ${skillCastPreview ? "is-preview" : ""}`}');
+    expect(componentSource).toContain('skill-cast-check');
     expect(styleSource).toContain('.beneficial-dom-layer');
     expect(styleSource).toContain('.skill-core');
     expect(styleSource).toContain('.skill-hands');
+    expect(styleSource).toContain('.skill-cast-vfx');
+    expect(styleSource).toContain('@keyframes skill-vfx-art');
+    expect(sceneSource).toContain('private playNoiseSweep(');
+    expect(sceneSource).toContain('this.playNoiseSweep(0.82, 160, 1600, 0.09)');
+    expect(sceneSource).toContain('this.playNoiseSweep(0.5, 120, 2800, 0.13)');
   });
 
   it("確認専用画面では蚊と小判を同時に表示できる", () => {
