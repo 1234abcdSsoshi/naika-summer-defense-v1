@@ -19,5 +19,8 @@
 | Middle-aged sleeper state sheet | 眠る中年男性の状態スプライト | 2x2：安眠、軽い虫刺され、刺し跡が増えた不穏な眠り、目覚めたゲームオーバーの反応。透明背景で統一。 | `/manus-storage/naika-sleeper-middle-aged-man-states_83f0aa21.png` | フィールド下部の人物・体力状態・ゲームオーバー演出 |
 | Koban collect SFX | 回収操作音 | 金属のチャリンと金色の余韻を持つ短尺効果音 | `/manus-storage/naika-koban-collect_c76439e0.mp3` | 小判をタップして回収した時 |
 | Item place SFX | 設置操作音 | 漆器の着地、陶器のクリック、行灯のきらめきを持つ短尺効果音 | `/manus-storage/naika-item-place_c23e24d7.mp3` | 防衛アイテムを畳に設置した時 |
+| Morning skill button | 朝のスキルボタン画像 | 透過背景、仏像の手、朝日を思わせる琥珀色の粒子、3Dデジタル調 | `/manus-storage/naika-skill-button-buddha_ef09ee94.png` | 朝ステージの「仏手の挟撃」ボタン |
+| Dusk skill button | 夕暮れのスキルボタン画像 | 透過背景、風袋を持つ風神、銅色と茜色の風の帯、3Dデジタル調 | `/manus-storage/naika-skill-button-fujin_169fc135.png` | 夕暮れステージの「風神の突風」ボタン |
+| Night skill button | 夜のスキルボタン画像 | 透過背景、太鼓を打つ雷神、銀青色の雷光、3Dデジタル調 | `/manus-storage/naika-skill-button-raijin_6b7390ec.png` | 夜ステージの「雷神の雷撃」ボタン |
 
 生成物は必ず使用前に、透過、輪郭、反復可能性、背景とのコントラストを確認する。現行プロトタイプでは、背景とロゴを直接利用し、人物・敵・道具は同一の色・シルエット指針に従ってBabylonの軽量図形として実装している。生成BGMはブラウザの自動再生制約を守るため、ユーザーの開始操作後にだけ再生する。

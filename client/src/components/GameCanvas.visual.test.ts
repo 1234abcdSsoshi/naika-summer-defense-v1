@@ -109,14 +109,26 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain(".wind-chime-settings-panel");
   });
 
-  it("スキルボタンは満タン時だけ表示・操作可能にし、発動中は入力を遮らない", () => {
-    expect(componentSource).toContain('phase === "playing" && (skill.ready || skill.casting)');
-    expect(componentSource).toContain('disabled={!skill.ready}');
-    expect(componentSource).toContain('skill.ready ? "発動" : "発動中"');
+  it("スキルゲージは上部バーで常時示し、満タン時だけステージ固有画像のスキルボタンを表示する", () => {
+    expect(componentSource).toContain('className={`skill-meter skill-meter-${difficulty} ${displayedSkill.ready ? "is-ready" : ""}`}');
+    expect(componentSource).toContain('aria-label={`スキルゲージ ${Math.round(displayedSkill.charge * 100)}%`}');
+    expect(componentSource).toContain('phase === "playing" && (displayedSkill.ready || displayedSkill.casting)');
+    expect(componentSource).toContain('disabled={!displayedSkill.ready}');
+    expect(componentSource).toContain('const SKILL_BUTTON_ASSETS: Record<DifficultyId, string>');
+    expect(componentSource).toContain('naika-skill-button-buddha_ef09ee94.png');
+    expect(componentSource).toContain('naika-skill-button-fujin_169fc135.png');
+    expect(componentSource).toContain('naika-skill-button-raijin_6b7390ec.png');
+    expect(componentSource).toContain('className="skill-button-art"');
+    expect(componentSource).not.toContain('className="skill-ring"');
     expect(styleSource).toContain(".skill-core.is-casting { pointer-events: none; }");
-    expect(styleSource).toContain(".skill-core { position: absolute; top: 32%; left: 50%");
+    expect(styleSource).toContain(".skill-meter { width: min(182px, 50vw)");
+    expect(styleSource).toContain(".skill-meter-track i { display: block; width: var(--skill-charge)");
+    expect(styleSource).toContain(".skill-core { position: absolute; top: 27%; left: 50%");
     expect(styleSource).toContain("transform: translate(-50%, -50%)");
-    expect(styleSource).toContain(".skill-core { top: 31%; left: 50%; width: 70px; height: 70px; transform: translate(-50%, -50%); }");
+    expect(styleSource).not.toContain(".skill-ring {");
+    expect(componentSource).toContain('const skillPreview = new URLSearchParams(window.location.search).has("skill-check")');
+    expect(componentSource).toContain('const skillStageParam = new URLSearchParams(window.location.search).get("skill-stage")');
+    expect(componentSource).toContain('if (skillStagePreview) handle.setDifficulty(skillStagePreview)');
   });
 
   it("風鈴タップからBGM音量を調整できる", () => {
@@ -181,7 +193,7 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).toContain('onBeneficials: setBeneficials');
     expect(componentSource).toContain('onSkill: setSkill');
     expect(componentSource).toContain('className={`beneficial-dom beneficial-${beneficial.type}`}');
-    expect(componentSource).toContain('className={`skill-core ${skill.ready ? "is-ready" : ""}');
+    expect(componentSource).toContain('className={`skill-core skill-core-${difficulty} ${displayedSkill.ready ? "is-ready" : ""}');
     expect(componentSource).toContain('handleRef.current?.activateSkill()');
     expect(styleSource).toContain('.beneficial-dom-layer');
     expect(styleSource).toContain('.skill-core');

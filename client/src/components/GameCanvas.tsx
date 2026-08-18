@@ -18,8 +18,17 @@ const INSECT_ATLAS = "/manus-storage/naika-3d-insect-atlas_425b7f3c.png";
 const SLEEPER_ASSET = "/manus-storage/naika-sleeper-middle-aged-man-upperbody-states-clean_49502447.png";
 const PILLOW_ASSET = "/manus-storage/naika-sleeper-japanese-pillow-horizontal_e5543254.png";
 const BENEFICIAL_ATLAS = "/manus-storage/naika-beneficial-insects_28ab2b8a.png";
-const SKILL_ICON_ATLAS = "/manus-storage/naika-skill-statue-icons_89e93357.png";
 const SKILL_HANDS_ATLAS = "/manus-storage/naika-skill-hands-atlas_8df6a165.png";
+const SKILL_BUTTON_ASSETS: Record<DifficultyId, string> = {
+  morning: "/manus-storage/naika-skill-button-buddha_ef09ee94.png",
+  dusk: "/manus-storage/naika-skill-button-fujin_169fc135.png",
+  night: "/manus-storage/naika-skill-button-raijin_6b7390ec.png",
+};
+const SKILL_BUTTON_TONES: Record<DifficultyId, string> = {
+  morning: "#e7a83b",
+  dusk: "#e07742",
+  night: "#7bb6ea",
+};
 const WIND_CHIME_ASSETS: Record<DifficultyId, string> = {
   morning: "/manus-storage/naika-wind-chime-morning-3d_8707824b.png",
   dusk: "/manus-storage/naika-wind-chime-dusk-transparent_eabe1a6a.png",
@@ -74,10 +83,12 @@ export default function GameCanvas() {
   const bgmRef = useRef<HTMLAudioElement>(null);
   const windChimeAudioRef = useRef<HTMLAudioElement | null>(null);
   const startedRef = useRef(false);
+  const skillStageParam = new URLSearchParams(window.location.search).get("skill-stage");
+  const skillStagePreview: DifficultyId | null = skillStageParam === "morning" || skillStageParam === "dusk" || skillStageParam === "night" ? skillStageParam : null;
   const [phase, setPhase] = useState<"title" | "playing" | "result">("title");
   const [hud, setHud] = useState<HudState>(initialHud);
   const [result, setResult] = useState<ResultState>({ score: 0, best: Number(localStorage.getItem("naika-high-score") ?? "0"), kills: 0, duration: 0 });
-  const [difficulty, setDifficulty] = useState<DifficultyId>("night");
+  const [difficulty, setDifficulty] = useState<DifficultyId>(skillStagePreview ?? "night");
   const [eventSummary, setEventSummary] = useState(() => getLocalEventSummary());
   const [audioSettings, setAudioSettings] = useState(() => ({
     bgm: Number(localStorage.getItem("naika-bgm-volume") ?? "0.10"),
@@ -97,6 +108,7 @@ export default function GameCanvas() {
   const [chimePulse, setChimePulse] = useState(false);
   const [isGameOverWaking, setIsGameOverWaking] = useState(false);
   const activationPreview = new URLSearchParams(window.location.search).has("activation-check");
+  const skillPreview = new URLSearchParams(window.location.search).has("skill-check");
   const sleeperPreview = new URLSearchParams(window.location.search).get("sleeper");
   const gameOverPreview = new URLSearchParams(window.location.search).has("game-over-check");
   const gameOverResultPreview = new URLSearchParams(window.location.search).has("game-over-result-check");
@@ -105,6 +117,7 @@ export default function GameCanvas() {
   const displayHealth = sleeperPreview ? previewHealth : hud.health;
   const sleeperState = getSleeperState(displayHealth, phase === "result" || isGameOverWaking);
   const stage = STAGE_PRESENTATIONS[difficulty];
+  const displayedSkill = skillPreview ? { ...skill, charge: 1, ready: true } : skill;
   const catActivations = [
     ...itemActivations.filter((activation) => activation.item === "cat" && activation.kind === "trigger"),
     ...(activationPreview ? placedItems.filter((item) => item.id === "cat").map((item) => ({ key: `activation-preview-${item.key}`, item: item.id, x: item.x, y: item.y, tone: item.tone, kind: "trigger" as const })) : []),
@@ -197,7 +210,8 @@ export default function GameCanvas() {
       handleRef.current = handle;
       engine.runRenderLoop(() => handle.scene.render());
       const params = new URLSearchParams(window.location.search);
-      if (params.has("visual-check") || params.has("frog-coin-check") || params.has("game-over-check") || params.has("game-over-result-check") || params.has("damage-demo") || params.has("mosquito-flow-demo") || params.has("mosquito-flow-result-demo")) {
+      if (params.has("visual-check") || params.has("skill-check") || params.has("frog-coin-check") || params.has("game-over-check") || params.has("game-over-result-check") || params.has("damage-demo") || params.has("mosquito-flow-demo") || params.has("mosquito-flow-result-demo")) {
+        if (skillStagePreview) handle.setDifficulty(skillStagePreview);
         handle.startRun();
       }
     });
@@ -333,6 +347,7 @@ export default function GameCanvas() {
             <button type="button" className="brand-mini brand-menu-button" onClick={openContinuePrompt} aria-label="最初の画面へ戻るか確認する"><img src={BRAND_MARK} alt="" /><span>内蚊</span></button>
             <div className="score-cluster"><span>{stage.shortLabel}の得点</span><strong>{hud.score.toLocaleString()}</strong></div>
           </div>
+          {phase === "playing" && <div className={`skill-meter skill-meter-${difficulty} ${displayedSkill.ready ? "is-ready" : ""}`} aria-label={`スキルゲージ ${Math.round(displayedSkill.charge * 100)}%`} style={{ "--skill-charge": `${Math.round(displayedSkill.charge * 100)}%` } as CSSProperties}><div className="skill-meter-copy"><span>スキル</span><strong>{displayedSkill.ready ? "発動可能" : `${Math.round(displayedSkill.charge * 100)}%`}</strong></div><div className="skill-meter-track"><i /></div><small>{stage.skillLabel}</small></div>}
           <div className="hud-readout">
             <div className="breath-meter"><span>寝息</span><div><i style={{ width: `${displayHealth}%` }} /></div><b>{displayHealth}</b></div>
             <div className="coin-readout"><i className="hud-koban" style={{ "--koban-asset": `url(${KOBAN_ASSET})` } as CSSProperties} aria-label="小判" /><b>{hud.coins}</b></div>
@@ -342,7 +357,7 @@ export default function GameCanvas() {
         </div>
       )}
 
-      {phase === "playing" && (skill.ready || skill.casting) && <div className={`skill-core ${skill.ready ? "is-ready" : ""} ${skill.casting ? "is-casting" : ""}`} style={{ "--skill-charge": `${Math.round(skill.charge * 360)}deg`, "--skill-icon": `url(${SKILL_ICON_ATLAS})`, "--skill-cell": `${SKILL_CELL[skill.motif]}`, "--skill-hands": `url(${SKILL_HANDS_ATLAS})`, "--skill-hand-row": `${SKILL_CELL[skill.motif]}` } as CSSProperties}><button type="button" onClick={() => handleRef.current?.activateSkill()} disabled={!skill.ready} aria-label={`${stage.skillLabel}を使う`}><span className="skill-ring" /><span className="skill-icon" /><small>{skill.ready ? "発動" : "発動中"}</small></button>{skill.casting && <div className="skill-hands" aria-label={stage.skillLabel}><i className="skill-hand-left" /><i className="skill-hand-right" /></div>}</div>}
+      {phase === "playing" && (displayedSkill.ready || displayedSkill.casting) && <div className={`skill-core skill-core-${difficulty} ${displayedSkill.ready ? "is-ready" : ""} ${displayedSkill.casting ? "is-casting" : ""}`} style={{ "--skill-button-art": `url(${SKILL_BUTTON_ASSETS[difficulty]})`, "--skill-tone": SKILL_BUTTON_TONES[difficulty], "--skill-hands": `url(${SKILL_HANDS_ATLAS})`, "--skill-hand-row": `${SKILL_CELL[displayedSkill.motif]}` } as CSSProperties}><button type="button" onClick={() => handleRef.current?.activateSkill()} disabled={!displayedSkill.ready} aria-label={`${stage.skillLabel}を使う`}><span className="skill-button-art" aria-hidden="true" /><span className="skill-button-copy"><small>{stage.shortLabel}の奥義</small><strong>{displayedSkill.ready ? stage.skillLabel : "発動中"}</strong></span></button>{displayedSkill.casting && <div className="skill-hands" aria-label={stage.skillLabel}><i className="skill-hand-left" /><i className="skill-hand-right" /></div>}</div>}
 
       {phase === "playing" && <div className={`game-sleeper-anchor sleeper-state-${sleeperState}`} data-sleeper-state={sleeperState} role="img" aria-label={`中年男性：${sleeperStatusCopy[sleeperState]}`} style={{ "--sleeper-asset": `url(${SLEEPER_ASSET})`, "--pillow-asset": `url(${PILLOW_ASSET})` } as CSSProperties}><span className="sleeper-pillow" aria-hidden="true" /><span className="sleeper-sprite" /><span className="sleeper-bite sleeper-bite-one" /><span className="sleeper-bite sleeper-bite-two" /><span className="sleeper-bite sleeper-bite-three" /><span className="sleeper-bite sleeper-bite-four" /><span className="sleeper-bite sleeper-bite-five" /><span className="sleeper-worry-lines" aria-hidden="true" /><small>{sleeperStatusCopy[sleeperState]}</small></div>}
 
