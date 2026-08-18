@@ -219,9 +219,9 @@ button { font: inherit; }
 .stage-atmosphere::before, .stage-atmosphere::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; }
 .stage-dusk .stage-atmosphere::before { opacity: .9; background: radial-gradient(ellipse 68% 34% at 50% 38%, rgba(255, 219, 145, .32), rgba(255, 128, 62, .18) 38%, transparent 75%), linear-gradient(180deg, rgba(255, 158, 76, .22), transparent 56%); mix-blend-mode: screen; }
 .stage-dusk .stage-atmosphere::after { opacity: .72; background: radial-gradient(ellipse 52% 28% at 50% 58%, rgba(255, 190, 101, .22), transparent 72%); filter: blur(9px); mix-blend-mode: screen; }
-.stage-night .stage-atmosphere::before { opacity: .82; background: radial-gradient(circle at 51% 40%, rgba(255, 255, 226, .15) 0 6%, rgba(181, 214, 255, .09) 15%, transparent 38%), radial-gradient(ellipse 64% 32% at 52% 43%, rgba(127, 177, 244, .07), transparent 70%); mix-blend-mode: screen; }
-.stage-night .stage-atmosphere::after { opacity: .62; background: radial-gradient(circle at 51% 40%, rgba(255, 255, 236, .12) 0 2%, rgba(224, 237, 255, .05) 5%, transparent 15%); filter: blur(3px); mix-blend-mode: screen; animation: moon-glow 4.8s ease-in-out infinite alternate; }
-.stage-atmosphere.is-night .stage-contrast-overlay { background: rgba(12, 24, 39, .03); backdrop-filter: brightness(1.08) contrast(1.04) saturate(1.05); }
+.stage-night .stage-atmosphere::before { opacity: .58; background: radial-gradient(circle at 51% 40%, rgba(255, 255, 226, .1) 0 5%, rgba(181, 214, 255, .055) 14%, transparent 35%), radial-gradient(ellipse 60% 29% at 52% 43%, rgba(127, 177, 244, .04), transparent 68%); mix-blend-mode: screen; }
+.stage-night .stage-atmosphere::after { opacity: .4; background: radial-gradient(circle at 51% 40%, rgba(255, 255, 236, .08) 0 1.8%, rgba(224, 237, 255, .03) 4.5%, transparent 13%); filter: blur(3px); mix-blend-mode: screen; animation: moon-glow 4.8s ease-in-out infinite alternate; }
+.stage-atmosphere.is-night .stage-contrast-overlay { background: rgba(7, 16, 31, .07); backdrop-filter: brightness(.94) contrast(1.08) saturate(1); }
 .stage-contrast-overlay { position: absolute; inset: 0; display: block; background: rgba(7, 20, 31, .08); backdrop-filter: brightness(.96) contrast(1.08) saturate(1.02); }
 .stage-dusk .stage-contrast-overlay { background: rgba(38, 14, 22, .06); backdrop-filter: brightness(1.02) contrast(1.06) saturate(1.12); }
 @keyframes moon-glow { from { opacity: .58; transform: scale(.99); } to { opacity: .88; transform: scale(1.018); } }
