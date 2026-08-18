@@ -195,6 +195,7 @@ class GameWorld {
   private threatSamples = 0;
   private nextMosquitoSyncAt = 0;
   private nextKobanSyncAt = 0;
+  private nextPlacedItemSyncAt = 0;
   private readonly telemetry = new GameplayTelemetry();
   private readonly playerRoot: TransformNode;
   private readonly playerHead: AbstractMesh;
@@ -507,6 +508,7 @@ class GameWorld {
     this.threatSamples = 0;
     this.nextMosquitoSyncAt = 0;
     this.nextKobanSyncAt = 0;
+    this.nextPlacedItemSyncAt = 0;
     this.nextBeneficialAt = this.difficulty === "morning" ? 12 : this.difficulty === "dusk" ? 12 : 13;
     this.skillCharge = 0;
     this.skillCastUntil = 0;
@@ -761,7 +763,7 @@ class GameWorld {
 
   private emitMosquitoViews(force = false) {
     if (!force && this.now < this.nextMosquitoSyncAt) return;
-    this.nextMosquitoSyncAt = this.now + 0.05;
+    this.nextMosquitoSyncAt = this.now + 0.08;
     this.callbacks.onMosquitoes(this.mosquitoes
       .filter((entry) => entry.state !== "falling")
       .map(({ id, type, x, y, vx }) => ({ id, type, x, y, bank: Math.max(-18, Math.min(18, -vx * 18)), scale: type === "sturdy" ? 1.16 : type === "fast" ? 0.9 : 1 })));
@@ -769,7 +771,7 @@ class GameWorld {
 
   private emitKobanViews(force = false) {
     if (!force && this.now < this.nextKobanSyncAt) return;
-    this.nextKobanSyncAt = this.now + 0.05;
+    this.nextKobanSyncAt = this.now + 0.08;
     this.callbacks.onKobans(this.coinsOnFloor.map(({ id, x, y }) => ({ id, x, y })));
   }
 
@@ -980,7 +982,7 @@ class GameWorld {
       }
       if (id === "daruma") this.spawnCoin(safeX + 0.42, safeY + 0.08, 1);
     }
-    this.emitPlacedItemViews();
+    this.emitPlacedItemViews(true);
     this.emitItemActivation(this.placed[this.placed.length - 1], "placed");
     this.placement = null;
     this.itemsPlaced += 1;
@@ -992,11 +994,13 @@ class GameWorld {
   private removeItem(item: PlacedItem, notice: string) {
     item.mesh.dispose();
     this.placed = this.placed.filter((entry) => entry !== item);
-    this.emitPlacedItemViews();
+    this.emitPlacedItemViews(true);
     this.emitHud(notice);
   }
 
-  private emitPlacedItemViews() {
+  private emitPlacedItemViews(force = false) {
+    if (!force && this.now < this.nextPlacedItemSyncAt) return;
+    this.nextPlacedItemSyncAt = this.now + 0.16;
     this.callbacks.onPlacedItems(this.placed.map(({ id, x, y, bornAt, mesh }) => {
       const runtime = ITEM_RUNTIME[id];
       const remaining = runtime.duration === null ? null : Math.max(0, runtime.duration - (this.now - bornAt));

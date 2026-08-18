@@ -99,6 +99,12 @@ export default function GameCanvas() {
     bgm: Number(localStorage.getItem("naika-bgm-volume") ?? "0.10"),
     sfx: Number(localStorage.getItem("naika-sfx-volume") ?? "1"),
   }));
+  const [performanceLight] = useState(() => {
+    const device = navigator as Navigator & { deviceMemory?: number };
+    return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+      || (device.deviceMemory !== undefined && device.deviceMemory <= 4)
+      || (device.hardwareConcurrency !== undefined && device.hardwareConcurrency <= 4);
+  });
   const [mosquitoes, setMosquitoes] = useState<MosquitoView[]>([]);
   const [kobans, setKobans] = useState<KobanView[]>([]);
   const [placedItems, setPlacedItems] = useState<PlacedItemView[]>([]);
@@ -177,7 +183,9 @@ export default function GameCanvas() {
     const canvas = canvasRef.current;
     if (!canvas || startedRef.current) return;
     startedRef.current = true;
-    const engine = new Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true, adaptToDeviceRatio: true });
+    const engine = new Engine(canvas, true, { preserveDrawingBuffer: false, stencil: false, adaptToDeviceRatio: false });
+    const renderScale = window.devicePixelRatio > 2 ? 1.55 : window.devicePixelRatio > 1.2 ? 1.25 : 1;
+    engine.setHardwareScalingLevel(renderScale);
     let disposed = false;
     let gameOverTimer: number | undefined;
     createGameScene(engine, canvas, {
@@ -315,7 +323,7 @@ export default function GameCanvas() {
   };
 
   return (
-    <main className={`night-shell stage-${difficulty}`}>
+    <main className={`night-shell stage-${difficulty} ${performanceLight ? "performance-light" : ""}`}>
       <div className="stage-background" aria-hidden="true" style={{ backgroundImage: `${stage.overlay}, url(${stage.background})` }} />
       <div className={`stage-atmosphere ${difficulty === "night" ? "is-night" : ""}`} aria-hidden="true">
         <span className="stage-contrast-overlay" />

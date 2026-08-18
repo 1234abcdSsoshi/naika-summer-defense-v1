@@ -9,6 +9,20 @@ const sceneSource = readFileSync(resolve(projectRoot, "client/src/game/scene.ts"
 const stageSource = readFileSync(resolve(projectRoot, "client/src/game/stage.ts"), "utf8");
 
 describe("蚊と小判の描画仕様", () => {
+  it("モバイルでは高DPR描画と保存用バッファを抑え、ゲームビュー同期を間引く", () => {
+    expect(componentSource).toContain('preserveDrawingBuffer: false, stencil: false, adaptToDeviceRatio: false');
+    expect(componentSource).toContain('engine.setHardwareScalingLevel(renderScale)');
+    expect(sceneSource).toContain('this.nextMosquitoSyncAt = this.now + 0.08');
+    expect(sceneSource).toContain('this.nextKobanSyncAt = this.now + 0.08');
+    expect(sceneSource).toContain('private nextPlacedItemSyncAt = 0');
+    expect(sceneSource).toContain('this.nextPlacedItemSyncAt = this.now + 0.16');
+    expect(sceneSource).toContain('private emitPlacedItemViews(force = false)');
+    expect(componentSource).toContain('const [performanceLight] = useState(() => {');
+    expect(componentSource).toContain('performanceLight ? "performance-light" : ""');
+    expect(styleSource).toContain('.performance-light .skill-cast-vfx');
+    expect(styleSource).toContain('.performance-light .skill-vfx-particles { display: none; }');
+  });
+
   it("小判上の丸いハイライト要素を描画しない", () => {
     const kobanMarkup = componentSource.match(/koban-dom-layer[\s\S]*?placed-item-dom-layer/)?.[0] ?? "";
     expect(kobanMarkup).not.toContain("<i />");
