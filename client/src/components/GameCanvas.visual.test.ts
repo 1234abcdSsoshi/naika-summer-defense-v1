@@ -85,6 +85,13 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).not.toContain("radial-gradient(circle at 51% 58%, rgba(255, 255, 226, .24)");
   });
 
+  it("夜ステージでは窓外の月と夜空だけに月光ハローを限定する", () => {
+    expect(componentSource).toContain('{difficulty === "night" && <span className="night-sky-moonlight" />}');
+    expect(styleSource).toContain(".night-sky-moonlight { position: absolute; left: 18%; top: 61%; width: 64%; height: 18%");
+    expect(styleSource).toContain("clip-path: polygon(6% 0, 94% 0, 100% 100%, 0 100%)");
+    expect(styleSource).toContain("radial-gradient(circle at 62% 27%, rgba(255, 255, 235, .9)");
+  });
+
   it("歯車を表示せず、風鈴タップで音量設定を開きランダムなチリン音を再生する", () => {
     expect(componentSource).not.toContain('className="settings-button"');
     expect(componentSource).toContain("const WIND_CHIME_ASSETS: Record<DifficultyId, string>");
