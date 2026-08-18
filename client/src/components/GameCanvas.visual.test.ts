@@ -122,10 +122,15 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).toContain('naika-skill-button-raijin_6b7390ec.png');
     expect(componentSource).toContain('className="skill-button-art"');
     expect(componentSource).not.toContain('className="skill-ring"');
+    expect(componentSource).toContain('const activeBgm = phase === "title" ? TITLE_BGM : stage.gameplayBgm');
+    expect(componentSource).toContain('<audio key={activeBgm} ref={bgmRef} src={activeBgm} loop preload="auto" />');
+    expect(componentSource).toContain('bgm.src = stage.gameplayBgm');
     expect(styleSource).toContain(".skill-core.is-casting { pointer-events: none; }");
     expect(styleSource).toContain(".skill-meter { flex: 0 1 126px; width: min(132px, 36vw)");
     expect(styleSource).toContain(".skill-meter-track i { display: block; width: var(--skill-charge)");
     expect(styleSource).toContain(".skill-meter small { display: none; }");
+    expect(styleSource).toContain(".skill-core button { position: relative; display: grid; place-items: center; width: 100%; height: 100%; overflow: hidden; padding: 0;");
+    expect(styleSource).toContain("border-radius: 50%;");
     expect(styleSource).toContain(".skill-core { position: absolute; top: 27%; left: 50%");
     expect(styleSource).toContain("transform: translate(-50%, -50%)");
     expect(styleSource).not.toContain(".skill-ring {");
@@ -173,8 +178,13 @@ describe("蚊と小判の描画仕様", () => {
 
   it("縁側へ戻るとプレイBGMからタイトルBGMへ切り替わる", () => {
     expect(componentSource).toContain('const TITLE_BGM = "/manus-storage/naika-engawa-title-bgm_bcb74aac.wav"');
-    expect(componentSource).toContain('src={phase === "title" ? TITLE_BGM : stage.gameplayBgm}');
-    expect(componentSource).toContain("if (phase === \"title\") bgm.play().catch(() => undefined)");
+    expect(componentSource).toContain('const activeBgm = phase === "title" ? TITLE_BGM : stage.gameplayBgm');
+    expect(componentSource).toContain('<audio key={activeBgm} ref={bgmRef} src={activeBgm} loop preload="auto" />');
+    expect(componentSource).toContain('if (phase !== "result") void bgm.play().catch(() => undefined)');
+    expect(componentSource).toContain('bgm.src = stage.gameplayBgm');
+    expect(stageSource).toContain('naika-morning-stage-bgm_df86c38d.wav');
+    expect(stageSource).toContain('naika-dusk-stage-bgm_ed66c60d.wav');
+    expect(stageSource).toContain('naika-night-defense-loop-no-bell_33ace5a3.mp3');
   });
 
   it("益虫を捕獲してスキルを蓄積し、ステージ固有の像モチーフで全蚊を撃破する", () => {

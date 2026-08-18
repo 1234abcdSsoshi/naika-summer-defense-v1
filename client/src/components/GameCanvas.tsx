@@ -117,6 +117,7 @@ export default function GameCanvas() {
   const displayHealth = sleeperPreview ? previewHealth : hud.health;
   const sleeperState = getSleeperState(displayHealth, phase === "result" || isGameOverWaking);
   const stage = STAGE_PRESENTATIONS[difficulty];
+  const activeBgm = phase === "title" ? TITLE_BGM : stage.gameplayBgm;
   const displayedSkill = skillPreview ? { ...skill, charge: 1, ready: true } : skill;
   const catActivations = [
     ...itemActivations.filter((activation) => activation.item === "cat" && activation.kind === "trigger"),
@@ -234,8 +235,8 @@ export default function GameCanvas() {
     bgm.pause();
     bgm.currentTime = 0;
     bgm.volume = audioSettings.bgm;
-    if (phase === "title") bgm.play().catch(() => undefined);
-  }, [phase]);
+    if (phase !== "result") void bgm.play().catch(() => undefined);
+  }, [activeBgm, audioSettings.bgm, phase]);
 
   const start = () => {
     setShowContinuePrompt(false);
@@ -244,8 +245,11 @@ export default function GameCanvas() {
     prepareWindChimeAudio();
     const bgm = bgmRef.current;
     if (bgm) {
+      bgm.pause();
+      bgm.src = stage.gameplayBgm;
+      bgm.load();
       bgm.volume = audioSettings.bgm;
-      bgm.play().catch(() => undefined);
+      void bgm.play().catch(() => undefined);
     }
     handleRef.current?.setDifficulty(difficulty);
     handleRef.current?.startRun();
@@ -310,7 +314,7 @@ export default function GameCanvas() {
       <div className={`stage-atmosphere ${difficulty === "night" ? "is-night" : ""}`} aria-hidden="true">
         <span className="stage-contrast-overlay" />
       </div>
-      <audio ref={bgmRef} src={phase === "title" ? TITLE_BGM : stage.gameplayBgm} loop preload="auto" />
+      <audio key={activeBgm} ref={bgmRef} src={activeBgm} loop preload="auto" />
       <canvas ref={canvasRef} onPointerMove={updatePlacementPreview} className="game-canvas" aria-label="内蚊のゲーム画面" style={{ touchAction: "none" }} />
       <div className="paper-grain" aria-hidden="true" />
       {phase !== "result" && <button type="button" className={`wind-chime-control wind-chime-${difficulty} ${chimePulse ? "is-ringing" : ""}`} aria-label="音量設定を開く" aria-expanded={showAudioSettings} onClick={() => { prepareWindChimeAudio(); playWindChime(); setShowAudioSettings((open) => !open); }}><img className="wind-chime-art" src={WIND_CHIME_ASSETS[difficulty]} alt="" /></button>}
