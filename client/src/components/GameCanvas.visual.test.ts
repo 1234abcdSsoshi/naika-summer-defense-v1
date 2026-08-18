@@ -82,6 +82,8 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).toContain("const WIND_CHIME_ASSETS: Record<DifficultyId, string>");
     expect(componentSource).toContain("naika-wind-chime-morning-3d_8707824b.png");
     expect(componentSource).toContain("naika-wind-chime-dusk-transparent_eabe1a6a.png");
+    expect(styleSource).toContain(".wind-chime-art { display: block; width: 62px; height: 132px; object-fit: contain; filter: none;");
+    expect(styleSource).not.toContain("drop-shadow(0 0 9px rgba(255,231,157,.82))");
     expect(componentSource).toContain("naika-wind-chime-night-3d_46098ebc.png");
     expect(componentSource).toContain("const WIND_CHIME_TONES: Record<DifficultyId");
     expect(componentSource).toContain('morning: { frequencies: [1760, 2093, 2637]');
