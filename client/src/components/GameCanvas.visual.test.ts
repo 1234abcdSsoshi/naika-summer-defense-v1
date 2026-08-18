@@ -78,9 +78,10 @@ describe("蚊と小判の描画仕様", () => {
   });
 
   it("夜ステージの月明かりは上方へ寄せ、中央の白い照明を抑える", () => {
-    expect(styleSource).toContain("radial-gradient(circle at 51% 40%, rgba(255, 255, 226, .15)");
-    expect(styleSource).toContain("radial-gradient(ellipse 64% 32% at 52% 43%, rgba(127, 177, 244, .07)");
-    expect(styleSource).toContain("radial-gradient(circle at 51% 40%, rgba(255, 255, 236, .12)");
+    expect(styleSource).toContain("radial-gradient(circle at 51% 40%, rgba(255, 255, 226, .075)");
+    expect(styleSource).toContain("radial-gradient(ellipse 58% 27% at 52% 43%, rgba(127, 177, 244, .028)");
+    expect(styleSource).toContain("radial-gradient(circle at 51% 40%, rgba(255, 255, 236, .055)");
+    expect(styleSource).toContain("backdrop-filter: brightness(.58) contrast(1.14) saturate(.85)");
     expect(styleSource).not.toContain("radial-gradient(circle at 51% 58%, rgba(255, 255, 226, .24)");
   });
 
