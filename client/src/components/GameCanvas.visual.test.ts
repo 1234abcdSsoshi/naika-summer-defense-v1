@@ -91,7 +91,7 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain(".night-sky-moonlight { position: absolute; left: 18%; top: 61%; width: 64%; height: 18%");
     expect(styleSource).toContain("clip-path: polygon(6% 0, 94% 0, 100% 100%, 0 100%)");
     expect(styleSource).toContain("linear-gradient(148deg, transparent 0 33%, rgba(202, 222, 255, .11)");
-    expect(styleSource).toContain(".night-room-moonbeam { position: absolute; left: 16%; top: 47%; width: 68%; height: 22%");
+    expect(styleSource).toContain(".night-room-moonbeam { position: absolute; left: 16%; top: 47%; width: 68%; height: 15%");
     expect(styleSource).toContain("clip-path: polygon(0 100%, 100% 100%, 66% 0, 38% 0)");
     expect(styleSource).not.toContain("radial-gradient(circle at 62% 27%, rgba(255, 255, 235, .9)");
   });
