@@ -207,6 +207,7 @@ button { font: inherit; }
   z-index: 0;
   background-size: cover;
   background-position: center;
+  transform: rotate(180deg);
 }
 /* 添付参考画面の縦構図：窓・縁側を約45%、畳のプレイ領域を約55%に見せる。 */
 .stage-morning .stage-background,
