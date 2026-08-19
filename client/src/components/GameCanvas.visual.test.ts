@@ -467,16 +467,31 @@ describe("蚊と小判の描画仕様", () => {
     expect(sceneSource).toContain("1 + this.combo * 0.05");
   });
 
-  it("不要な命中・手動回収案内を表示せず、カエルは半分の間隔で捕食し、蚊を最前面へ描画する", () => {
+  it("不要な命中・手動回収案内を表示せず、カエルは毎秒2回捕食し、蚊を最前面へ描画する", () => {
     expect(sceneSource).not.toContain('"命中！"');
     expect(sceneSource).not.toContain('"指先で回収 +1"');
-    expect(sceneSource).toContain("const FROG_CAPTURE_INTERVAL = 0.2");
+    expect(sceneSource).toContain("const FROG_CAPTURE_INTERVAL = 0.5");
     expect(sceneSource).toContain("item.nextActionAt = this.now + FROG_CAPTURE_INTERVAL");
-    expect(sceneSource).toContain("const FROG_TONGUE_CYCLE_MS = 180");
+    expect(sceneSource).toContain("const FROG_TONGUE_CYCLE_MS = 340");
     expect(styleSource).toContain("frog-3d-strike .18s");
     expect(styleSource).toContain(".enemy-dom-layer { pointer-events: none; position: absolute; z-index: 6;");
     expect(styleSource).toContain(".koban-dom-layer { pointer-events: none; position: absolute; z-index: 4;");
     expect(styleSource).toContain(".placed-item-dom-layer { pointer-events: none; position: absolute; z-index: 3;");
+  });
+
+  it("全蚊を半速にし、蚊取り線香は射程内の蚊へ毎秒1ダメージを与える", () => {
+    expect(sceneSource).toContain("const MOSQUITO_SPEED_MULTIPLIER = 0.5");
+    expect(sceneSource).toContain("speed: info.speed * MOSQUITO_SPEED_MULTIPLIER");
+    expect(sceneSource).toContain("item.nextActionAt = this.now + 1");
+    expect(sceneSource).toContain("mosquito.hp -= 1");
+    expect(sceneSource).toContain("if (mosquito.hp <= 0) this.killMosquito(mosquito, false)");
+  });
+
+  it("蚊音は3〜13秒だけ再生し、休止・ゲームオーバー時に停止する", () => {
+    expect(sceneSource).toContain("if (this.now < 3 || this.now >= 13)");
+    expect(sceneSource).toContain("if (paused) this.stopMosquitoBuzz();");
+    const endRun = sceneSource.match(/private endRun\(\)[\s\S]*?private makeSprite/)?.[0] ?? "";
+    expect(endRun).toContain("this.stopMosquitoBuzz();");
   });
 
   it("寝ている中年男性は体力に応じて刺し跡と表情を変え、体力が尽きると目を覚ます", () => {

@@ -177,9 +177,10 @@ const ITEM_RUNTIME: Record<ItemId, { duration: number | null; range: number; ton
   frog: { duration: 20, range: 1.7, tone: "#88b76d" },
   daruma: { duration: 12, range: 2.25, tone: "#cc5c4c" },
 };
-const FROG_CAPTURE_INTERVAL = 0.2;
+const MOSQUITO_SPEED_MULTIPLIER = 0.5;
+const FROG_CAPTURE_INTERVAL = 0.5;
 const FROG_TONGUE_DELAY_MS = 35;
-const FROG_TONGUE_CYCLE_MS = 180;
+const FROG_TONGUE_CYCLE_MS = 340;
 
 const MOSQUITO_INFO: Record<MosquitoType, { hp: number; speed: number; score: number; coin: number; color: Color3 }> = {
   small: { hp: 1, speed: 1.15, score: 100, coin: 1, color: Color3.FromHexString("#1D1B22") },
@@ -613,7 +614,7 @@ class GameWorld {
     // 敵の見た目はDOMスプライトだけが担当する。非表示Babylonスプライトを
     // 作らないことで、高密度時のメッシュ更新・マテリアル負荷を避ける。
     root.setEnabled(false);
-    this.mosquitoes.push({ id: this.mosquitoId++, type, hp: info.hp, state: "approaching", x, y, vx: 0, vy: 0, speed: info.speed, biteAt: 0, fallingFor: 0, capturedFor: 0, captureOriginX: x, captureOriginY: y, captureTargetX: x, captureTargetY: y, nextSpecialAt: this.now + (type === "brood" ? 0.9 : type === "needle" ? 1.1 : Number.POSITIVE_INFINITY), mesh: root });
+    this.mosquitoes.push({ id: this.mosquitoId++, type, hp: info.hp, state: "approaching", x, y, vx: 0, vy: 0, speed: info.speed * MOSQUITO_SPEED_MULTIPLIER, biteAt: 0, fallingFor: 0, capturedFor: 0, captureOriginX: x, captureOriginY: y, captureTargetX: x, captureTargetY: y, nextSpecialAt: this.now + (type === "brood" ? 0.9 : type === "needle" ? 1.1 : Number.POSITIVE_INFINITY), mesh: root });
     if (type === "swarm" && !forcedType) {
       this.spawnMosquito("small");
     }
@@ -805,11 +806,14 @@ class GameWorld {
         item.mesh.scaling.setAll(Math.max(0.72, 1 - age / 64));
         if (age > 15 && !this.itemPreviewHold) this.removeItem(item, "線香の煙が消えた");
         const targets = this.mosquitoes.filter((mosquito) => mosquito.state !== "falling" && distance(item.x, item.y, mosquito.x, mosquito.y) < ITEM_RUNTIME.incense.range);
-        if (targets.length) {
-          item.nextActionAt = this.now + 0.72;
+        if (targets.length && this.now >= item.nextActionAt) {
+          item.nextActionAt = this.now + 1;
           this.emitItemActivation(item, "trigger");
+          for (const mosquito of targets) {
+            mosquito.hp -= 1;
+            if (mosquito.hp <= 0) this.killMosquito(mosquito, false);
+          }
         }
-        for (const mosquito of targets) this.killMosquito(mosquito, false);
       }
       if (item.id === "cat") {
         item.mesh.rotation.z = Math.sin(this.now * 10) * 0.08;
@@ -1022,7 +1026,7 @@ class GameWorld {
     if (!mosquito) return;
     mosquito.type = "sturdy";
     mosquito.hp = MOSQUITO_INFO.sturdy.hp;
-    mosquito.speed = 18;
+    mosquito.speed = 9;
     mosquito.x = 0;
     mosquito.y = this.playerY + 0.76;
     mosquito.vx = 0;
@@ -1146,6 +1150,7 @@ class GameWorld {
   private endRun() {
     this.running = false;
     this.placement = null;
+    this.stopMosquitoBuzz();
     const previous = Number(localStorage.getItem("naika-high-score") ?? "0");
     const best = Math.max(previous, this.score);
     const analytics: RunAnalytics = {
@@ -1291,7 +1296,6 @@ class GameWorld {
     const context = this.getAudioContext();
     if (!context) return;
     context.resume().catch(() => undefined);
-    this.startMosquitoBuzz(context);
   }
 
   private playTone(frequency: number, duration: number, type: OscillatorType, volume: number, startAfter = 0) {
@@ -1417,7 +1421,12 @@ class GameWorld {
   }
 
   private updateMosquitoBuzz() {
+    if (this.now < 3 || this.now >= 13) {
+      this.stopMosquitoBuzz();
+      return;
+    }
     const context = this.audioContext;
+    if (context && !this.buzzOscillator && !this.buzzGain) this.startMosquitoBuzz(context);
     const gain = this.buzzGain;
     const oscillator = this.buzzOscillator;
     const filter = this.buzzFilter;
