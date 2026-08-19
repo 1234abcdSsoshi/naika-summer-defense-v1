@@ -1088,12 +1088,7 @@ class GameWorld {
   }
 
   private createOrientedBackgroundTexture(url: string) {
-    const texture = new Texture(url, this.scene, true, false);
-    texture.uScale = -1;
-    texture.vScale = -1;
-    texture.uOffset = 1;
-    texture.vOffset = 1;
-    return texture;
+    return new Texture(url, this.scene, true, false);
   }
 
   private makeSprite(name: string, url: string, size: number) {
@@ -1332,13 +1327,6 @@ export async function createGameScene(engine: Engine, canvas: HTMLCanvasElement,
   camera.orthoBottom = -7;
   camera.setTarget(Vector3.Zero());
   const roomLayer = new Layer("room-background", STAGE_PRESENTATIONS.night.background, scene, true);
-  const roomTexture = roomLayer.texture as Texture | null;
-  if (roomTexture) {
-    roomTexture.uScale = -1;
-    roomTexture.vScale = -1;
-    roomTexture.uOffset = 1;
-    roomTexture.vOffset = 1;
-  }
 
   const vignette = MeshBuilder.CreatePlane("indigo-vignette", { width: 8, height: 14 }, scene);
   vignette.position.z = -0.1;

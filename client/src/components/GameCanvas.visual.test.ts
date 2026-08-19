@@ -86,18 +86,18 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).not.toContain('.moon-disc {');
   });
 
-  it("ゲーム中の背景反転を維持しつつ、ホーム画面は正しい向きで表示する", () => {
+  it("背景元画像の向きをホーム画面とゲーム画面でそのまま維持する", () => {
     expect(componentSource).toContain('className="stage-background"');
     expect(componentSource).toContain('phase-${phase}');
-    expect(styleSource).toContain('transform: rotate(180deg)');
-    expect(styleSource).toContain('.phase-title .stage-background { transform: none; }');
+    expect(styleSource).not.toContain('transform: rotate(180deg)');
+    expect(styleSource).not.toContain('.phase-title .stage-background');
     expect(styleSource).toContain('.stage-morning .stage-background');
     expect(styleSource).toContain('.stage-night .stage-background');
     expect(styleSource).toContain('background-size: 100% 100%');
-    expect(sceneSource).toContain("texture.uScale = -1");
-    expect(sceneSource).toContain("texture.vScale = -1");
-    expect(sceneSource).toContain("texture.uOffset = 1");
-    expect(sceneSource).toContain("texture.vOffset = 1");
+    expect(sceneSource).not.toContain("texture.uScale = -1");
+    expect(sceneSource).not.toContain("texture.vScale = -1");
+    expect(sceneSource).not.toContain("texture.uOffset = 1");
+    expect(sceneSource).not.toContain("texture.vOffset = 1");
   });
 
   it("朝・夕暮れは風鈴だけを背景演出として表示し、背景の視認性を補正する", () => {
