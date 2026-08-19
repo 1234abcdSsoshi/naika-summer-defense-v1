@@ -42,21 +42,33 @@ describe("蚊と小判の描画仕様", () => {
   });
 
   it("Babylon側の蚊・小判下層ビジュアルを非表示にする", () => {
-    const mosquitoSpawn = sceneSource.match(/private spawnMosquito\(\)[\s\S]*?private updateMosquitoes/)?.[0] ?? "";
+    const mosquitoSpawn = sceneSource.match(/private spawnMosquito\([\s\S]*?private spawnBeneficial/)?.[0] ?? "";
     const coinSpawn = sceneSource.match(/private spawnCoin\([\s\S]*?private collectCoin/)?.[0] ?? "";
     expect(mosquitoSpawn).toContain("root.setEnabled(false)");
     expect(coinSpawn).toContain("root.setEnabled(false)");
   });
 
-  it("5種類の蚊を個別スプライトで描画し、時間経過で解禁する", () => {
+  it("10種類の蚊と卵・幼虫・針を個別スプライトで描画し、時間経過で解禁する", () => {
     expect(componentSource).toContain('const MOSQUITO_SPRITES: Record<MosquitoView["type"], string>');
     expect(componentSource).toContain("naika-mosquito-striped-sprite_51ac0220.png");
     expect(componentSource).toContain("naika-mosquito-giant-sprite_79bc0575.png");
+    expect(componentSource).toContain("naika-mosquito-brood-sprite_3d3812cb.png");
+    expect(componentSource).toContain("naika-mosquito-dart-sprite_25512159.png");
+    expect(componentSource).toContain("naika-mosquito-tank-sprite_4e400a58.png");
+    expect(componentSource).toContain("naika-mosquito-needle-sprite_a6033f92.png");
+    expect(componentSource).toContain("naika-mosquito-swarm-sprite_a944c58a.png");
+    expect(componentSource).toContain("const HAZARD_SPRITES: Record<HazardView");
+    expect(componentSource).toContain('className="hazard-dom-layer"');
     expect(styleSource).toContain(".enemy-dom-striped");
     expect(styleSource).toContain(".enemy-dom-giant");
-    expect(mosquitoProgressionSource).toContain('if (elapsed < 20) return 0');
-    expect(mosquitoProgressionSource).toContain('if (elapsed < 80) return 3');
+    expect(styleSource).toContain(".hazard-dom-layer");
+    expect(mosquitoProgressionSource).toContain('if (elapsed < 15) return 0');
+    expect(mosquitoProgressionSource).toContain('if (elapsed < 135) return 8');
     expect(mosquitoProgressionSource).toContain('availableTypes: AVAILABLE_TYPES[index]');
+    expect(sceneSource).toContain('this.spawnHazard("egg"');
+    expect(sceneSource).toContain('this.spawnHazard("needle"');
+    expect(sceneSource).toContain('this.spawnHazard("larva"');
+    expect(sceneSource).toContain('針を壊した。小判は出ない');
   });
 
   it("ホーム画面へ水色のBabylon人物・布団下層を表示しない", () => {

@@ -30,5 +30,13 @@
 | Morning cicada | 朝の益虫スプライト | 参考画像の正面構図を踏まえた緑褐色の体節、透明な翅と細かな翅脈を持つ写実的なセミ、透過背景 | `/manus-storage/naika-beneficial-cicada-reference-sprite_33aec204.png` | 朝ステージでタップ獲得するセミ |
 | Dusk dragonfly | 夕暮れの益虫スプライト | 青緑と琥珀の胴、透明な四枚羽、3Dデジタル調、透過背景 | `/manus-storage/naika-beneficial-dragonfly_035e0bf2.png` | 夕暮れステージでタップ獲得するトンボ |
 | Night rhinoceros beetle | 夜の益虫スプライト | 黒褐色の艶ある甲、Y字の角、青い縁光、3Dデジタル調、透過背景 | `/manus-storage/naika-beneficial-rhinoceros-beetle_b6e64210.png` | 夜ステージでタップ獲得するカブトムシ |
+| Brood mosquito | 産卵特殊蚊 | 卵を抱えた琥珀腹部、半透明の翅、3Dデジタル調、透過背景 | `/manus-storage/naika-mosquito-brood-sprite_3d3812cb.png` | 卵を落とし、1秒後に幼虫を孵化させる特殊蚊 |
+| Dart mosquito | 超高速特殊蚊 | 銀青の細身、短いシアン残像、3Dデジタル調、透過背景 | `/manus-storage/naika-mosquito-dart-sprite_25512159.png` | 非常に速く接近する特殊蚊 |
+| Tank mosquito | 重装特殊蚊 | 太い鎧状の腹部、遅いが高耐久、3Dデジタル調、透過背景 | `/manus-storage/naika-mosquito-tank-sprite_4e400a58.png` | 4回のタップが必要な大型特殊蚊 |
+| Needle mosquito | 針射出特殊蚊 | 長い針状の口吻、深緑の甲、3Dデジタル調、透過背景 | `/manus-storage/naika-mosquito-needle-sprite_a6033f92.png` | 小判を落とさない針を射出する特殊蚊 |
+| Swarm mosquito | 群飛特殊蚊 | 小型の追随個体を伴う縞蚊、3Dデジタル調、透過背景 | `/manus-storage/naika-mosquito-swarm-sprite_a944c58a.png` | 出現時に追加の小蚊を呼ぶ特殊蚊 |
+| Egg hazard | 孵化前の卵 | 琥珀色の卵塊、3Dデジタル調、透過背景 | `/manus-storage/naika-hazard-egg-sprite_a11929c9.png` | 1秒以内にタップして孵化を防ぐ |
+| Larva hazard | 孵化した幼虫 | 殻から出た濃緑の幼虫、3Dデジタル調、透過背景 | `/manus-storage/naika-hazard-larva-sprite_2a7101be.png` | 高速で人へ近づく、撃破しても小判なし |
+| Needle hazard | 飛来する針 | 琥珀先端を持つ細い針、3Dデジタル調、透過背景 | `/manus-storage/naika-hazard-needle-sprite_5ca3d79a.png` | タップ破壊可能、報酬なしの投射物 |
 
 生成物は必ず使用前に、透過、輪郭、反復可能性、背景とのコントラストを確認する。現行プロトタイプでは、背景とロゴを直接利用し、人物・敵・道具は同一の色・シルエット指針に従ってBabylonの軽量図形として実装している。生成BGMはブラウザの自動再生制約を守るため、ユーザーの開始操作後にだけ再生する。

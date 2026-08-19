@@ -5,7 +5,7 @@
  */
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { Engine } from "@babylonjs/core/Engines/engine";
-import { createGameScene, type BeneficialView, type FrogTongueView, type GameHandle, type HudState, type ItemActivationView, type ItemId, type KobanView, type MosquitoView, type PlacedItemView, type ResultState, type SkillView } from "@/game/scene";
+import { createGameScene, type BeneficialView, type FrogTongueView, type GameHandle, type HazardView, type HudState, type ItemActivationView, type ItemId, type KobanView, type MosquitoView, type PlacedItemView, type ResultState, type SkillView } from "@/game/scene";
 import { DIFFICULTY_PROFILES, type DifficultyId } from "@/game/difficulty";
 import { getLocalEventSummary } from "@/game/telemetry";
 import { BENEFICIAL_CELL, SKILL_CELL, STAGE_PRESENTATIONS, type BeneficialType } from "@/game/stage";
@@ -20,6 +20,16 @@ const MOSQUITO_SPRITES: Record<MosquitoView["type"], string> = {
   sturdy: "/manus-storage/naika-mosquito-sturdy-sprite_87f8df86.png",
   striped: "/manus-storage/naika-mosquito-striped-sprite_51ac0220.png",
   giant: "/manus-storage/naika-mosquito-giant-sprite_79bc0575.png",
+  brood: "/manus-storage/naika-mosquito-brood-sprite_3d3812cb.png",
+  dart: "/manus-storage/naika-mosquito-dart-sprite_25512159.png",
+  tank: "/manus-storage/naika-mosquito-tank-sprite_4e400a58.png",
+  needle: "/manus-storage/naika-mosquito-needle-sprite_a6033f92.png",
+  swarm: "/manus-storage/naika-mosquito-swarm-sprite_a944c58a.png",
+};
+const HAZARD_SPRITES: Record<HazardView["kind"], string> = {
+  egg: "/manus-storage/naika-hazard-egg-sprite_a11929c9.png",
+  larva: "/manus-storage/naika-hazard-larva-sprite_2a7101be.png",
+  needle: "/manus-storage/naika-hazard-needle-sprite_5ca3d79a.png",
 };
 const SLEEPER_ASSET = "/manus-storage/naika-sleeper-middle-aged-man-upperbody-states-clean_49502447.png";
 const PILLOW_ASSET = "/manus-storage/naika-sleeper-japanese-pillow-horizontal_e5543254.png";
@@ -115,6 +125,7 @@ export default function GameCanvas() {
       || (device.hardwareConcurrency !== undefined && device.hardwareConcurrency <= 4);
   });
   const [mosquitoes, setMosquitoes] = useState<MosquitoView[]>([]);
+  const [hazards, setHazards] = useState<HazardView[]>([]);
   const [kobans, setKobans] = useState<KobanView[]>([]);
   const [placedItems, setPlacedItems] = useState<PlacedItemView[]>([]);
   const [frogTongue, setFrogTongue] = useState<FrogTongueView | null>(null);
@@ -162,6 +173,7 @@ export default function GameCanvas() {
     createGameScene(engine, canvas, {
       onHud: setHud,
       onMosquitoes: setMosquitoes,
+      onHazards: setHazards,
       onKobans: setKobans,
       onPlacedItems: setPlacedItems,
       onFrogTongue: setFrogTongue,
@@ -196,7 +208,7 @@ export default function GameCanvas() {
       handleRef.current = handle;
       engine.runRenderLoop(() => handle.scene.render());
       const params = new URLSearchParams(window.location.search);
-      if (params.has("visual-check") || params.has("beneficial-check") || params.has("skill-check") || params.has("skill-cast-check") || params.has("frog-coin-check") || params.has("game-over-check") || params.has("game-over-result-check") || params.has("damage-demo") || params.has("mosquito-flow-demo") || params.has("mosquito-flow-result-demo")) {
+      if (params.has("visual-check") || params.has("beneficial-check") || params.has("skill-check") || params.has("skill-cast-check") || params.has("frog-coin-check") || params.has("game-over-check") || params.has("game-over-result-check") || params.has("damage-demo") || params.has("mosquito-flow-demo") || params.has("mosquito-flow-result-demo") || params.has("hazard-check") || params.has("mosquito-type-check")) {
         if (skillStagePreview) handle.setDifficulty(skillStagePreview);
         handle.startRun();
       }
@@ -304,6 +316,7 @@ export default function GameCanvas() {
       {phase !== "result" && <button type="button" className={`wind-chime-control wind-chime-${difficulty} ${chimePulse ? "is-ringing" : ""}`} aria-label="音量設定を開く" aria-expanded={showAudioSettings} onClick={() => { pulseWindChime(); setShowAudioSettings((open) => !open); }}><img className="wind-chime-art" src={WIND_CHIME_ASSETS[difficulty]} alt="" /></button>}
       {phase !== "result" && showAudioSettings && <aside className="settings-panel wind-chime-settings-panel" aria-label="音量設定"><div className="settings-panel-title">音量設定</div><label><span>BGM</span><output>{Math.round(audioSettings.bgm * 100)}%</output><input type="range" min="0" max="1" step="0.01" value={audioSettings.bgm} onInput={(event) => updateAudioSetting("bgm", event.currentTarget.value)} aria-label="BGM音量" /></label><label><span>効果音</span><output>{Math.round(audioSettings.sfx * 100)}%</output><input type="range" min="0" max="1" step="0.01" value={audioSettings.sfx} onInput={(event) => updateAudioSetting("sfx", event.currentTarget.value)} aria-label="効果音音量" /></label></aside>}
       {phase === "playing" && <div className="enemy-dom-layer" aria-live="polite" aria-label={`接近中の蚊 ${mosquitoes.length}匹`}>{mosquitoes.map((mosquito) => <div key={mosquito.id} className={`enemy-dom enemy-dom-${mosquito.type}`} style={{ left: `${((mosquito.x + 4) / 8) * 100}%`, top: `${((7 - mosquito.y) / 14) * 100}%`, "--enemy-sprite": `url(${MOSQUITO_SPRITES[mosquito.type]})`, "--enemy-bank": `${mosquito.bank}deg`, "--enemy-scale": `${mosquito.scale}` } as CSSProperties}><span className="enemy-wing enemy-wing-left" /><span className="enemy-wing enemy-wing-right" /><span className="enemy-body" /><span className="enemy-legs" /></div>)}</div>}
+      {phase === "playing" && <div className="hazard-dom-layer" aria-live="polite" aria-label={`接近中の特殊ギミック ${hazards.length}個`}>{hazards.map((hazard) => <div key={hazard.id} className={`hazard-dom hazard-dom-${hazard.kind}`} style={{ left: `${((hazard.x + 4) / 8) * 100}%`, top: `${((7 - hazard.y) / 14) * 100}%`, "--hazard-sprite": `url(${HAZARD_SPRITES[hazard.kind]})`, "--hazard-angle": `${hazard.angle}rad`, "--hazard-scale": `${hazard.scale}` } as CSSProperties} />)}</div>}
       {phase === "playing" && <div className="beneficial-dom-layer" aria-live="polite" aria-label={`飛来中の益虫 ${beneficials.length}匹`}>{beneficials.map((beneficial) => {
         const sprite = BENEFICIAL_SPRITES[beneficial.type];
         return <div key={beneficial.id} className={`beneficial-dom beneficial-${beneficial.type} ${sprite ? "has-beneficial-sprite" : ""}`} style={{ left: `${((beneficial.x + 4) / 8) * 100}%`, top: `${((7 - beneficial.y) / 14) * 100}%`, "--beneficial-atlas": `url(${BENEFICIAL_ATLAS})`, "--beneficial-cell": `${BENEFICIAL_CELL[beneficial.type]}`, "--beneficial-sprite": sprite ? `url(${sprite})` : "none" } as CSSProperties}><span /></div>;
