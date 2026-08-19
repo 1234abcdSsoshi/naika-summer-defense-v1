@@ -11,6 +11,8 @@
 | Common mosquito sprite | 通常敵 | 小型の黒炭色の蚊、月白の羽、行灯橙の微光 | `/manus-storage/naika-mosquito-small-sprite_af4952dd.png` | 通常敵の描画 |
 | Fast mosquito sprite | 高速敵 | 細身の紺黒の蚊、後ろへ流れる羽、橙の腹部線 | `/manus-storage/naika-mosquito-fast-sprite_f65f8e38.png` | 高速敵の描画 |
 | Sturdy mosquito sprite | 強敵 | 太い墨黒の胴、広い藍の羽、朱印の印 | `/manus-storage/naika-mosquito-sturdy-sprite_87f8df86.png` | 強敵の描画 |
+| Striped mosquito sprite | 後半高速敵 | 黒炭色と象牙色の縞、細身の体、月白の透明翅 | `/manus-storage/naika-mosquito-striped-sprite_51ac0220.png` | 60秒以降に解禁する縞蚊の描画 |
+| Giant mosquito sprite | 最終強敵 | 濃い青銅色の太い胴、広い煙色の翅、控えめな朱の腹部印 | `/manus-storage/naika-mosquito-giant-sprite_79bc0575.png` | 80秒以降に解禁する大型蚊の描画 |
 | Defense item atlas | 道具の2x2スプライト | 線香、招き猫、蛙、達磨を木版画調で統一 | `/manus-storage/naika-defense-items-atlas_4c991078.png` | 道具トレイ・設置物の描画 |
 | Woodblock VFX atlas | 命中・撃破・落下・被弾の2x2VFX | 墨線、橙朱の印影、煙、ダメージ印 | `/manus-storage/naika-woodblock-vfx-atlas_9cc67c3a.png` | 画面内の短時間VFX |
 | 3D defense atlas | 防衛アイテムの2x2スプライト | 線香、招き猫、カエル、ダルマを釉薬・漆・湿潤素材で描いた3Dデジタル調 | `/manus-storage/naika-3d-defense-atlas_d5b41c2f.png` | アイテムトレイ・設置アイテム |

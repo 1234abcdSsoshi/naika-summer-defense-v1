@@ -6,6 +6,7 @@ const projectRoot = resolve(import.meta.dirname, "../../..");
 const componentSource = readFileSync(resolve(projectRoot, "client/src/components/GameCanvas.tsx"), "utf8");
 const styleSource = readFileSync(resolve(projectRoot, "client/src/index.css"), "utf8");
 const sceneSource = readFileSync(resolve(projectRoot, "client/src/game/scene.ts"), "utf8");
+const mosquitoProgressionSource = readFileSync(resolve(projectRoot, "client/src/game/mosquitoProgression.ts"), "utf8");
 const stageSource = readFileSync(resolve(projectRoot, "client/src/game/stage.ts"), "utf8");
 
 describe("蚊と小判の描画仕様", () => {
@@ -45,6 +46,17 @@ describe("蚊と小判の描画仕様", () => {
     const coinSpawn = sceneSource.match(/private spawnCoin\([\s\S]*?private collectCoin/)?.[0] ?? "";
     expect(mosquitoSpawn).toContain("root.setEnabled(false)");
     expect(coinSpawn).toContain("root.setEnabled(false)");
+  });
+
+  it("5種類の蚊を個別スプライトで描画し、時間経過で解禁する", () => {
+    expect(componentSource).toContain('const MOSQUITO_SPRITES: Record<MosquitoView["type"], string>');
+    expect(componentSource).toContain("naika-mosquito-striped-sprite_51ac0220.png");
+    expect(componentSource).toContain("naika-mosquito-giant-sprite_79bc0575.png");
+    expect(styleSource).toContain(".enemy-dom-striped");
+    expect(styleSource).toContain(".enemy-dom-giant");
+    expect(mosquitoProgressionSource).toContain('if (elapsed < 20) return 0');
+    expect(mosquitoProgressionSource).toContain('if (elapsed < 80) return 3');
+    expect(mosquitoProgressionSource).toContain('availableTypes: AVAILABLE_TYPES[index]');
   });
 
   it("ホーム画面へ水色のBabylon人物・布団下層を表示しない", () => {

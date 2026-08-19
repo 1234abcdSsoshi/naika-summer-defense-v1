@@ -24,11 +24,14 @@ import { DIFFICULTY_PROFILES, getAdaptiveThreat, type DifficultyId } from "./dif
 import { GameplayTelemetry, type RunAnalytics } from "./telemetry";
 import { STAGE_PRESENTATIONS, type BeneficialType, type SkillMotif } from "./stage";
 import { BENEFICIAL_CAPTURE_CHARGE, getBeneficialSpawnInterval } from "./beneficialBalance";
+import { chooseMosquitoType, getMosquitoWave, type MosquitoType } from "./mosquitoProgression";
 
 const ENEMY_SPRITES: Record<MosquitoType, string> = {
   small: "/manus-storage/naika-mosquito-small-sprite_af4952dd.png",
   fast: "/manus-storage/naika-mosquito-fast-sprite_f65f8e38.png",
   sturdy: "/manus-storage/naika-mosquito-sturdy-sprite_87f8df86.png",
+  striped: "/manus-storage/naika-mosquito-striped-sprite_51ac0220.png",
+  giant: "/manus-storage/naika-mosquito-giant-sprite_79bc0575.png",
 };
 const ITEM_ATLAS = "/manus-storage/naika-defense-items-atlas_4c991078.png";
 const VFX_ATLAS = "/manus-storage/naika-woodblock-vfx-atlas_9cc67c3a.png";
@@ -36,7 +39,6 @@ const KOBAN_COLLECT_SFX = "/manus-storage/naika-koban-collect_c76439e0.mp3";
 const ITEM_PLACE_SFX = "/manus-storage/naika-item-place_c23e24d7.mp3";
 
 export type ItemId = "incense" | "cat" | "frog" | "daruma";
-type MosquitoType = "small" | "fast" | "sturdy";
 type MosquitoState = "approaching" | "feeding" | "captured" | "falling";
 
 export type HudState = {
@@ -156,6 +158,8 @@ const MOSQUITO_INFO: Record<MosquitoType, { hp: number; speed: number; score: nu
   small: { hp: 1, speed: 1.15, score: 100, coin: 1, color: Color3.FromHexString("#1D1B22") },
   fast: { hp: 1, speed: 1.78, score: 160, coin: 1, color: Color3.FromHexString("#243A5A") },
   sturdy: { hp: 2, speed: 0.94, score: 260, coin: 2, color: Color3.FromHexString("#3A2C3D") },
+  striped: { hp: 1, speed: 2.12, score: 220, coin: 1, color: Color3.FromHexString("#34444B") },
+  giant: { hp: 3, speed: 0.82, score: 460, coin: 3, color: Color3.FromHexString("#452C33") },
 };
 
 class GameWorld {
@@ -204,6 +208,10 @@ class GameWorld {
   private readonly inspect = new URLSearchParams(window.location.search).has("inspect");
   private readonly visualCheck = new URLSearchParams(window.location.search).has("visual-check");
   private readonly beneficialCheck = new URLSearchParams(window.location.search).has("beneficial-check");
+  private readonly mosquitoTypeCheck: MosquitoType | null = (() => {
+    const type = new URLSearchParams(window.location.search).get("mosquito-type-check");
+    return type === "small" || type === "fast" || type === "sturdy" || type === "striped" || type === "giant" ? type : null;
+  })();
   private readonly gameOverPreview = new URLSearchParams(window.location.search).has("game-over-check");
   private readonly gameOverResultPreview = new URLSearchParams(window.location.search).has("game-over-result-check");
   private readonly damageDemoStage = (() => {
@@ -521,22 +529,18 @@ class GameWorld {
   }
 
   private spawnMosquito() {
-    const stage = this.now < 30 ? 0 : this.now < 60 ? 1 : 2;
-    const profile = DIFFICULTY_PROFILES[this.difficulty];
-    const roll = this.random();
-    const sturdyBias = profile.sturdyBias + Math.max(0, this.currentThreat - 1) * 0.12;
-    const type: MosquitoType = stage === 0 ? (roll < 0.78 - sturdyBias * 0.4 ? "small" : "fast") : stage === 1 ? (roll < 0.48 - sturdyBias ? "small" : roll < 0.83 - sturdyBias * 0.45 ? "fast" : "sturdy") : roll < 0.32 - sturdyBias ? "small" : roll < 0.69 - sturdyBias * 0.45 ? "fast" : "sturdy";
-    const activeCap = Math.max(2, Math.round(profile.activeCaps[stage] * (this.currentThreat > 1.1 ? 1.08 : 1)));
-    const interval = profile.spawnIntervals[stage] / this.currentThreat;
-    this.nextSpawnAt = this.now + interval;
-    if (this.mosquitoes.filter((entry) => entry.state !== "falling").length >= activeCap) return;
+    const wave = getMosquitoWave({ difficulty: this.difficulty, elapsed: this.now, threat: this.currentThreat });
+    const type = this.mosquitoTypeCheck ?? chooseMosquitoType(wave, this.random());
+    this.nextSpawnAt = this.now + wave.spawnInterval;
+    if (this.mosquitoes.filter((entry) => entry.state !== "falling").length >= wave.activeCap) return;
     const info = MOSQUITO_INFO[type];
     const x = -3.35 + this.random() * 6.7;
     const y = 3.45 + this.random() * 0.65;
     const root = new TransformNode(`mosquito-${this.mosquitoId}`, this.scene);
     root.position = new Vector3(x, y, 0.62);
     this.makeMosquitoSilhouette(`mosquito-ink-${this.mosquitoId}`, type).parent = root;
-    const sprite = this.makeSprite(`mosquito-sprite-${this.mosquitoId}`, ENEMY_SPRITES[type], type === "sturdy" ? 0.96 : type === "fast" ? 0.74 : 0.68);
+    const spriteSize = type === "giant" ? 1.12 : type === "sturdy" ? 0.96 : type === "striped" ? 0.78 : type === "fast" ? 0.74 : 0.68;
+    const sprite = this.makeSprite(`mosquito-sprite-${this.mosquitoId}`, ENEMY_SPRITES[type], spriteSize);
     sprite.parent = root;
     sprite.position.z = 0.035;
     // Visible appearance is rendered by the DOM overlay. Hide this legacy
@@ -544,7 +548,7 @@ class GameWorld {
     root.setEnabled(false);
     this.mosquitoes.push({ id: this.mosquitoId++, type, hp: info.hp, state: "approaching", x, y, vx: 0, vy: 0, speed: info.speed, biteAt: 0, fallingFor: 0, capturedFor: 0, captureOriginX: x, captureOriginY: y, captureTargetX: x, captureTargetY: y, mesh: root });
     this.emitMosquitoViews(true);
-    this.telemetry.track("enemy_spawned", { type, stage, threat: Number(this.currentThreat.toFixed(2)), difficulty: this.difficulty });
+    this.telemetry.track("enemy_spawned", { type, wave: wave.index, threat: Number(this.currentThreat.toFixed(2)), difficulty: this.difficulty });
   }
 
   private spawnBeneficial() {
@@ -1108,14 +1112,15 @@ class GameWorld {
 
   private makeMosquitoSilhouette(name: string, type: MosquitoType) {
     const root = new TransformNode(name, this.scene);
-    const bodySize = type === "sturdy" ? 0.18 : type === "fast" ? 0.115 : 0.14;
-    const body = this.makeDisc(`${name}-body`, bodySize, type === "sturdy" ? Color3.FromHexString("#321E31") : Color3.FromHexString("#161A27"), 0.96);
+    const isHeavy = type === "sturdy" || type === "giant";
+    const bodySize = type === "giant" ? 0.22 : isHeavy ? 0.18 : type === "fast" || type === "striped" ? 0.115 : 0.14;
+    const body = this.makeDisc(`${name}-body`, bodySize, isHeavy ? Color3.FromHexString("#321E31") : Color3.FromHexString("#161A27"), 0.96);
     body.scaling.y = 1.26;
     body.parent = root;
     body.position.z = -0.025;
-    const wingColor = Color3.FromHexString(type === "fast" ? "#AFC8D6" : "#DCE6E5");
+    const wingColor = Color3.FromHexString(type === "fast" || type === "striped" ? "#AFC8D6" : "#DCE6E5");
     for (const side of [-1, 1]) {
-      const wing = this.makeDisc(`${name}-wing-${side}`, type === "sturdy" ? 0.19 : 0.15, wingColor, 0.7);
+      const wing = this.makeDisc(`${name}-wing-${side}`, isHeavy ? 0.19 : 0.15, wingColor, 0.7);
       wing.scaling.set(1.2, 0.34, 1);
       wing.position.set(side * 0.16, 0.08, -0.04);
       wing.rotation.z = side * 0.38;
