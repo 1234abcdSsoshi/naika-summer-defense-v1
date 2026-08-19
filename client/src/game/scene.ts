@@ -45,7 +45,7 @@ const HAZARD_SPRITES = {
 } as const;
 const ITEM_ATLAS = "/manus-storage/naika-defense-items-atlas_4c991078.png";
 const VFX_ATLAS = "/manus-storage/naika-woodblock-vfx-atlas_9cc67c3a.png";
-const KOBAN_COLLECT_SFX = "/manus-storage/naika-koban-collect_c76439e0.mp3";
+const KOBAN_COLLECT_SFX = "/manus-storage/naika-koban-piggybank_6e0b5118.mp3";
 const ITEM_PLACE_SFX = "/manus-storage/naika-item-place_c23e24d7.mp3";
 
 export type ItemId = "incense" | "cat" | "frog" | "daruma";
@@ -1052,7 +1052,7 @@ class GameWorld {
     coin.mesh.dispose();
     this.coinsOnFloor = this.coinsOnFloor.filter((entry) => entry !== coin);
     this.emitKobanViews(true);
-    this.playInteractionSfx(this.kobanCollectSfx, 0.48, 0.3);
+    this.playInteractionSfx(this.kobanCollectSfx, 0.48, 0, 2, null);
     this.telemetry.track("coin_collected", { coins: this.coins, source: notice?.includes("ダルマ") ? "daruma" : "tap" });
     this.emitHud(notice);
   }
@@ -1375,17 +1375,19 @@ class GameWorld {
     this.playTone(62, 0.48, "sine", 0.09, 0.16);
   }
 
-  private playInteractionSfx(source: HTMLAudioElement, volume: number, startAtSeconds = 0) {
+  private playInteractionSfx(source: HTMLAudioElement, volume: number, startAtSeconds = 0, playbackRate = 1, stopAfterSourceSeconds: number | null = 1) {
     try {
       const effect = source.cloneNode(true) as HTMLAudioElement;
       effect.volume = volume * this.sfxVolume;
       effect.preload = "auto";
       effect.currentTime = startAtSeconds;
+      effect.playbackRate = playbackRate;
       void effect.play().then(() => {
+        if (stopAfterSourceSeconds === null) return;
         window.setTimeout(() => {
           effect.pause();
           effect.currentTime = 0;
-        }, Math.max(0, 1000 - startAtSeconds * 1000));
+        }, Math.max(0, (stopAfterSourceSeconds - startAtSeconds) * 1000 / playbackRate));
       }).catch(() => undefined);
     } catch { /* Sound effects are enhancements only. */ }
   }

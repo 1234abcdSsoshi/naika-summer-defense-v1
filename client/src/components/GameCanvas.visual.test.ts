@@ -224,12 +224,13 @@ describe("蚊と小判の描画仕様", () => {
     const mosquitoSpawn = sceneSource.match(/private spawnMosquito\(\)[\s\S]*?private spawnBeneficial/)?.[0] ?? "";
     expect(mosquitoSpawn).not.toContain("playTone");
     expect(sceneSource).toContain("startMosquitoBuzz(context)");
-    expect(sceneSource).toContain('const KOBAN_COLLECT_SFX = "/manus-storage/naika-koban-collect_c76439e0.mp3"');
+    expect(sceneSource).toContain('const KOBAN_COLLECT_SFX = "/manus-storage/naika-koban-piggybank_6e0b5118.mp3"');
     expect(sceneSource).toContain('const ITEM_PLACE_SFX = "/manus-storage/naika-item-place_c23e24d7.mp3"');
-    expect(sceneSource).toContain("Math.max(0, 1000 - startAtSeconds * 1000)");
     expect(sceneSource).toContain("effect.pause();");
-    expect(sceneSource).toContain("this.playInteractionSfx(this.kobanCollectSfx, 0.48, 0.3);");
-    expect(sceneSource).toContain("Math.max(0, 1000 - startAtSeconds * 1000)");
+    expect(sceneSource).toContain("this.playInteractionSfx(this.kobanCollectSfx, 0.48, 0, 2, null);");
+    expect(sceneSource).toContain("effect.playbackRate = playbackRate;");
+    expect(sceneSource).toContain("if (stopAfterSourceSeconds === null) return;");
+    expect(sceneSource).toContain("Math.max(0, (stopAfterSourceSeconds - startAtSeconds) * 1000 / playbackRate)");
   });
 
   it("確認画面を開くとゲームを一時停止し、キャンセルで再開する", () => {

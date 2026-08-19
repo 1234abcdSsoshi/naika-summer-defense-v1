@@ -19,7 +19,7 @@
 | 3D koban | 通貨スプライト | 打ち出し金属と行灯橙の反射を持つ小判 | `/manus-storage/naika-3d-koban_5621d1b0.png` | ドロップ小判・価格マーク |
 | 3D insect atlas | 敵スプライト | 月光の半透明羽と光沢ある胴を持つ3種の3D飛翔昆虫 | `/manus-storage/naika-3d-insect-atlas_425b7f3c.png` | 通常敵・高速敵・強敵 |
 | Middle-aged sleeper state sheet | 眠る中年男性の状態スプライト | 2x2：安眠、軽い虫刺され、刺し跡が増えた不穏な眠り、目覚めたゲームオーバーの反応。透明背景で統一。 | `/manus-storage/naika-sleeper-middle-aged-man-states_83f0aa21.png` | フィールド下部の人物・体力状態・ゲームオーバー演出 |
-| Koban collect SFX | 回収操作音 | 金属のチャリンと金色の余韻を持つ短尺効果音 | `/manus-storage/naika-koban-collect_c76439e0.mp3` | 小判をタップして回収した時 |
+| Koban collect SFX | 回収操作音 | ユーザー提供の貯金箱音。小判をタップして回収した時に2倍速で最後まで再生する。 | `/manus-storage/naika-koban-piggybank_6e0b5118.mp3` | 小判をタップして回収した時 |
 | Item place SFX | 設置操作音 | 漆器の着地、陶器のクリック、行灯のきらめきを持つ短尺効果音 | `/manus-storage/naika-item-place_c23e24d7.mp3` | 防衛アイテムを畳に設置した時 |
 | Morning skill button | 朝のスキルボタン画像 | 透過背景、仏像の手、朝日を思わせる琥珀色の粒子、3Dデジタル調 | `/manus-storage/naika-skill-button-buddha_ef09ee94.png` | 朝ステージの「仏手の挟撃」ボタン |
 | Dusk skill button | 夕暮れのスキルボタン画像 | 透過背景、風袋を持つ風神、銅色と茜色の風の帯、3Dデジタル調 | `/manus-storage/naika-skill-button-fujin_169fc135.png` | 夕暮れステージの「風神の突風」ボタン |
