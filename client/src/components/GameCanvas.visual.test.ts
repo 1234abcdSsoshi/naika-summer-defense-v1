@@ -47,6 +47,14 @@ describe("蚊と小判の描画仕様", () => {
     expect(coinSpawn).toContain("root.setEnabled(false)");
   });
 
+  it("ホーム画面へ水色のBabylon人物・布団下層を表示しない", () => {
+    expect(sceneSource).toContain("this.playerRoot.setEnabled(false)");
+    expect(sceneSource).not.toContain('"player-body"');
+    expect(sceneSource).not.toContain('"player-head"');
+    expect(sceneSource).not.toContain('"futon-blanket"');
+    expect(componentSource).not.toContain('className="sleeping-band"');
+  });
+
   it("朝・夕暮れ・夜の3ステージ固有背景を使用し、夜は満月版を維持する", () => {
     expect(stageSource).toContain('export type StageId = "morning" | "dusk" | "night"');
     expect(stageSource).toContain('morning: {');

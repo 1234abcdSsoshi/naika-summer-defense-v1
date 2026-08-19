@@ -199,8 +199,6 @@ class GameWorld {
   private nextPlacedItemSyncAt = 0;
   private readonly telemetry = new GameplayTelemetry();
   private readonly playerRoot: TransformNode;
-  private readonly playerHead: AbstractMesh;
-  private readonly playerBody: AbstractMesh;
   private readonly callbacks: GameCallbacks;
   private readonly demo = new URLSearchParams(window.location.search).has("demo");
   private readonly inspect = new URLSearchParams(window.location.search).has("inspect");
@@ -268,18 +266,8 @@ class GameWorld {
     window.addEventListener("naika-audio-settings", this.onAudioSettings);
     this.playerRoot = new TransformNode("sleeping-person", scene);
     this.playerRoot.position = new Vector3(0, this.playerY, 0.15);
-    this.playerBody = this.makeDisc("player-body", 1.22, Color3.FromHexString("#E6D8BD"));
-    this.playerBody.scaling.y = 0.58;
-    this.playerBody.parent = this.playerRoot;
-    this.playerBody.position = new Vector3(0, -0.2, 0);
-    this.playerHead = this.makeDisc("player-head", 0.43, Color3.FromHexString("#EFCDB6"));
-    this.playerHead.parent = this.playerRoot;
-    this.playerHead.position = new Vector3(-0.88, 0.1, 0.03);
-    const blanket = this.makeDisc("futon-blanket", 1.48, Color3.FromHexString("#53739A"));
-    blanket.scaling.y = 0.48;
-    blanket.parent = this.playerRoot;
-    blanket.position = new Vector3(0.24, -0.55, -0.04);
-    // The React DOM character sprite is the sole visible sleeper representation.
+    // The React DOM character sprite is the sole sleeper representation. The old
+    // Babylon discs are intentionally not created: they leaked as blue shapes on the title screen.
     this.playerRoot.setEnabled(false);
   }
 
@@ -362,7 +350,6 @@ class GameWorld {
   update(delta: number) {
     const safeDelta = Math.min(delta, 0.05);
     if (!this.running || this.paused) return;
-    this.animatePlayer();
     this.now += safeDelta;
     this.skillCharge = Math.min(1, this.skillCharge + safeDelta / 60);
     this.currentThreat = getAdaptiveThreat(this.health, this.hits / Math.max(1, this.taps), this.now);
@@ -1071,11 +1058,6 @@ class GameWorld {
         daruma: { price: 10, active: active("daruma") },
       },
     });
-  }
-
-  private animatePlayer() {
-    const breath = 1 + Math.sin(performance.now() / 450) * 0.018 * Math.max(0.3, this.health / 100);
-    this.playerBody.scaling.x = 1.22 * breath;
   }
 
   private updateVfx() {
