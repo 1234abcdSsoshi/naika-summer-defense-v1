@@ -96,8 +96,7 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain('background-size: 100% 100%');
     expect(sceneSource).not.toContain("texture.uScale = -1");
     expect(sceneSource).not.toContain("texture.vScale = -1");
-    expect(sceneSource).not.toContain("texture.uOffset = 1");
-    expect(sceneSource).not.toContain("texture.vOffset = 1");
+    expect(sceneSource).not.toContain("setRoomLayerOrientation");
   });
 
   it("朝・夕暮れは風鈴だけを背景演出として表示し、背景の視認性を補正する", () => {
