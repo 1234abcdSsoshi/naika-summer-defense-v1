@@ -55,6 +55,8 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).not.toContain('className="sleeping-band"');
     expect(componentSource).not.toContain('mosquito-shape mosquito-one');
     expect(componentSource).not.toContain('mosquito-shape mosquito-two');
+    expect(componentSource).not.toContain('lantern-ring ring-one');
+    expect(componentSource).not.toContain('lantern-ring ring-two');
   });
 
   it("朝・夕暮れ・夜の3ステージ固有背景を使用し、夜は満月版を維持する", () => {

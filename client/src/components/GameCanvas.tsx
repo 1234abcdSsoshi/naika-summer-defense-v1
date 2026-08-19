@@ -364,7 +364,6 @@ export default function GameCanvas() {
           </div>
         ))}
       </div>}
-      {phase === "title" && <div className="title-world-signals" aria-hidden="true"><span className="lantern-ring ring-one" /><span className="lantern-ring ring-two" /></div>}
 
       {phase !== "title" && (
         <div className="hud" aria-live="polite">
