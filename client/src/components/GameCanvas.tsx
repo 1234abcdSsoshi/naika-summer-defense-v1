@@ -44,7 +44,6 @@ const WIND_CHIME_ASSETS: Record<DifficultyId, string> = {
   night: "/manus-storage/naika-wind-chime-night-3d_46098ebc.png",
 };
 const INCENSE_ASSET = "/manus-storage/naika-incense-reference-cutout_eeafc68a.png";
-const WIND_CHIME_AUDIO = "/manus-storage/naika-wind-chime-user_5fe486b7.mp3";
 const PLACEMENT_RANGE: Record<ItemId, number> = { incense: 1.5, cat: 2.25, frog: 2, daruma: 2.25 };
 
 type SleeperState = "rested" | "bitten" | "distressed" | "awake";
@@ -90,7 +89,6 @@ export default function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const handleRef = useRef<GameHandle | null>(null);
   const bgmRef = useRef<HTMLAudioElement>(null);
-  const windChimeAudioRef = useRef<HTMLAudioElement | null>(null);
   const startedRef = useRef(false);
   const skillStageParam = new URLSearchParams(window.location.search).get("skill-stage");
   const skillStagePreview: DifficultyId | null = skillStageParam === "morning" || skillStageParam === "dusk" || skillStageParam === "night" ? skillStageParam : null;
@@ -140,48 +138,10 @@ export default function GameCanvas() {
     ...(activationPreview ? placedItems.filter((item) => item.id === "cat").map((item) => ({ key: `activation-preview-${item.key}`, item: item.id, x: item.x, y: item.y, tone: item.tone, kind: "trigger" as const })) : []),
   ];
 
-  const prepareWindChimeAudio = () => {
-    if (!windChimeAudioRef.current) {
-      const audio = new Audio(WIND_CHIME_AUDIO);
-      audio.preload = "auto";
-      windChimeAudioRef.current = audio;
-    }
-    return windChimeAudioRef.current;
-  };
-
-  const playWindChime = () => {
-    const audio = prepareWindChimeAudio();
-    if (audioSettings.sfx <= 0) return;
-    audio.pause();
-    audio.currentTime = 0;
-    audio.volume = audioSettings.sfx;
-    void audio.play().catch(() => undefined);
+  const pulseWindChime = () => {
     setChimePulse(true);
     window.setTimeout(() => setChimePulse(false), 720);
   };
-
-  useEffect(() => {
-    if (phase === "result") return;
-    let cancelled = false;
-    let timer: number | undefined;
-    const scheduleChime = () => {
-      timer = window.setTimeout(() => {
-        if (cancelled) return;
-        playWindChime();
-        scheduleChime();
-      }, 7200 + Math.random() * 5800);
-    };
-    scheduleChime();
-    return () => {
-      cancelled = true;
-      if (timer) window.clearTimeout(timer);
-    };
-  }, [difficulty, phase, audioSettings.sfx]);
-
-  useEffect(() => () => {
-    windChimeAudioRef.current?.pause();
-    windChimeAudioRef.current = null;
-  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -260,7 +220,6 @@ export default function GameCanvas() {
     setShowContinuePrompt(false);
     setShowAudioSettings(false);
     setIsGameOverWaking(false);
-    prepareWindChimeAudio();
     const bgm = bgmRef.current;
     if (bgm) {
       bgm.pause();
@@ -335,7 +294,7 @@ export default function GameCanvas() {
       <audio key={activeBgm} ref={bgmRef} src={activeBgm} loop preload="auto" />
       <canvas ref={canvasRef} onPointerMove={updatePlacementPreview} className="game-canvas" aria-label="内蚊のゲーム画面" style={{ touchAction: "none" }} />
       <div className="paper-grain" aria-hidden="true" />
-      {phase !== "result" && <button type="button" className={`wind-chime-control wind-chime-${difficulty} ${chimePulse ? "is-ringing" : ""}`} aria-label="音量設定を開く" aria-expanded={showAudioSettings} onClick={() => { prepareWindChimeAudio(); playWindChime(); setShowAudioSettings((open) => !open); }}><img className="wind-chime-art" src={WIND_CHIME_ASSETS[difficulty]} alt="" /></button>}
+      {phase !== "result" && <button type="button" className={`wind-chime-control wind-chime-${difficulty} ${chimePulse ? "is-ringing" : ""}`} aria-label="音量設定を開く" aria-expanded={showAudioSettings} onClick={() => { pulseWindChime(); setShowAudioSettings((open) => !open); }}><img className="wind-chime-art" src={WIND_CHIME_ASSETS[difficulty]} alt="" /></button>}
       {phase !== "result" && showAudioSettings && <aside className="settings-panel wind-chime-settings-panel" aria-label="音量設定"><div className="settings-panel-title">音量設定</div><label><span>BGM</span><output>{Math.round(audioSettings.bgm * 100)}%</output><input type="range" min="0" max="1" step="0.01" value={audioSettings.bgm} onInput={(event) => updateAudioSetting("bgm", event.currentTarget.value)} aria-label="BGM音量" /></label><label><span>効果音</span><output>{Math.round(audioSettings.sfx * 100)}%</output><input type="range" min="0" max="1" step="0.01" value={audioSettings.sfx} onInput={(event) => updateAudioSetting("sfx", event.currentTarget.value)} aria-label="効果音音量" /></label></aside>}
       {phase === "playing" && <div className="enemy-dom-layer" aria-live="polite" aria-label={`接近中の蚊 ${mosquitoes.length}匹`}>{mosquitoes.map((mosquito) => <div key={mosquito.id} className={`enemy-dom enemy-dom-${mosquito.type}`} style={{ left: `${((mosquito.x + 4) / 8) * 100}%`, top: `${((7 - mosquito.y) / 14) * 100}%`, "--insect-atlas": `url(${INSECT_ATLAS})`, "--enemy-bank": `${mosquito.bank}deg`, "--enemy-scale": `${mosquito.scale}` } as CSSProperties}><span className="enemy-wing enemy-wing-left" /><span className="enemy-wing enemy-wing-right" /><span className="enemy-body" /><span className="enemy-legs" /></div>)}</div>}
       {phase === "playing" && <div className="beneficial-dom-layer" aria-live="polite" aria-label={`飛来中の益虫 ${beneficials.length}匹`}>{beneficials.map((beneficial) => {

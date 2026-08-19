@@ -111,7 +111,7 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).not.toContain("radial-gradient(circle at 51% 58%, rgba(255, 255, 226, .24)");
   });
 
-  it("歯車を表示せず、風鈴タップで音量設定を開きランダムなチリン音を再生する", () => {
+  it("歯車を表示せず、風鈴タップで無音の音量設定を開く", () => {
     expect(componentSource).not.toContain('className="settings-button"');
     expect(componentSource).toContain("const WIND_CHIME_ASSETS: Record<DifficultyId, string>");
     expect(componentSource).toContain("naika-wind-chime-morning-3d_8707824b.png");
@@ -119,17 +119,17 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain(".wind-chime-art { display: block; width: 62px; height: 132px; object-fit: contain; filter: none;");
     expect(styleSource).not.toContain("drop-shadow(0 0 9px rgba(255,231,157,.82))");
     expect(componentSource).toContain("naika-wind-chime-night-3d_46098ebc.png");
-    expect(componentSource).toContain('const WIND_CHIME_AUDIO = "/manus-storage/naika-wind-chime-user_5fe486b7.mp3"');
-    expect(componentSource).toContain("const audio = new Audio(WIND_CHIME_AUDIO)");
-    expect(componentSource).toContain("audio.currentTime = 0");
-    expect(componentSource).toContain("audio.volume = audioSettings.sfx");
+    expect(componentSource).not.toContain("WIND_CHIME_AUDIO");
+    expect(componentSource).not.toContain("new Audio(");
+    expect(componentSource).not.toContain("7200 + Math.random() * 5800");
+    expect(componentSource).toContain("const pulseWindChime = () =>");
+    expect(componentSource).toContain("setChimePulse(true)");
     expect(componentSource).toContain('className={`wind-chime-control wind-chime-${difficulty} ${chimePulse ? "is-ringing" : ""}`}');
     expect(componentSource).toContain('className="wind-chime-art"');
     expect(componentSource).toContain('aria-label="音量設定を開く"');
-    expect(componentSource).toContain("prepareWindChimeAudio(); playWindChime();");
-    expect(componentSource).toContain("7200 + Math.random() * 5800");
+    expect(componentSource).toContain("pulseWindChime(); setShowAudioSettings");
     expect(componentSource).not.toContain('if (difficulty === "night" || phase === "result") return;');
-    expect(componentSource).toContain("void audio.play().catch(() => undefined)");
+    expect(componentSource).not.toContain("void audio.play().catch(() => undefined)");
     expect(componentSource).toContain('className="settings-panel wind-chime-settings-panel"');
     expect(styleSource).toContain(".wind-chime-control");
     expect(styleSource).toContain(".wind-chime-settings-panel");
