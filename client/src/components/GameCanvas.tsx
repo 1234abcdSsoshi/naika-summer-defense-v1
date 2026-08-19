@@ -19,6 +19,7 @@ const SLEEPER_ASSET = "/manus-storage/naika-sleeper-middle-aged-man-upperbody-st
 const PILLOW_ASSET = "/manus-storage/naika-sleeper-japanese-pillow-horizontal_e5543254.png";
 const BENEFICIAL_ATLAS = "/manus-storage/naika-beneficial-insects_28ab2b8a.png";
 const BENEFICIAL_SPRITES: Partial<Record<BeneficialType, string>> = {
+  cicada: "/manus-storage/naika-beneficial-cicada-reference-sprite_33aec204.png",
   dragonfly: "/manus-storage/naika-beneficial-dragonfly_035e0bf2.png",
   beetle: "/manus-storage/naika-beneficial-rhinoceros-beetle_b6e64210.png",
 };

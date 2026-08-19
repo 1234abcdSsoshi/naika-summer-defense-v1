@@ -237,6 +237,7 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).toContain('onBeneficials: setBeneficials');
     expect(componentSource).toContain('onSkill: setSkill');
     expect(componentSource).toContain('className={`beneficial-dom beneficial-${beneficial.type} ${sprite ? "has-beneficial-sprite" : ""}`}');
+    expect(componentSource).toContain('cicada: "/manus-storage/naika-beneficial-cicada-reference-sprite_33aec204.png"');
     expect(componentSource).toContain('dragonfly: "/manus-storage/naika-beneficial-dragonfly_035e0bf2.png"');
     expect(componentSource).toContain('beetle: "/manus-storage/naika-beneficial-rhinoceros-beetle_b6e64210.png"');
     expect(componentSource).toContain('params.has("beneficial-check")');
@@ -247,6 +248,7 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).toContain('skill-cast-check');
     expect(styleSource).toContain('.beneficial-dom-layer');
     expect(styleSource).toContain('.beneficial-dom.has-beneficial-sprite span');
+    expect(styleSource).toContain('.beneficial-cicada');
     expect(styleSource).toContain('.beneficial-dragonfly');
     expect(styleSource).toContain('.beneficial-beetle');
     expect(styleSource).toContain('.skill-core');

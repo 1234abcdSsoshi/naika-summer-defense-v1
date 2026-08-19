@@ -25,6 +25,7 @@
 | Morning skill VFX | 朝の発動オーバーレイ | 金色の曼荼羅、蓮のハロー、朝日の放射光、透過背景 | `/manus-storage/naika-skill-vfx-buddha_a620e655.png` | 仏手の挟撃の発動演出 |
 | Dusk skill VFX | 夕暮れの発動オーバーレイ | 茜と翡翠の風渦、風の帯、光る葉の粒子、透過背景 | `/manus-storage/naika-skill-vfx-fujin_0dfea19c.png` | 風神の突風の発動演出 |
 | Night skill VFX | 夜の発動オーバーレイ | 青紫の雷光、衝撃波、雷の火花、透過背景 | `/manus-storage/naika-skill-vfx-raijin_33a2d377.png` | 雷神の雷撃の発動演出 |
+| Morning cicada | 朝の益虫スプライト | 参考画像の正面構図を踏まえた緑褐色の体節、透明な翅と細かな翅脈を持つ写実的なセミ、透過背景 | `/manus-storage/naika-beneficial-cicada-reference-sprite_33aec204.png` | 朝ステージでタップ獲得するセミ |
 | Dusk dragonfly | 夕暮れの益虫スプライト | 青緑と琥珀の胴、透明な四枚羽、3Dデジタル調、透過背景 | `/manus-storage/naika-beneficial-dragonfly_035e0bf2.png` | 夕暮れステージでタップ獲得するトンボ |
 | Night rhinoceros beetle | 夜の益虫スプライト | 黒褐色の艶ある甲、Y字の角、青い縁光、3Dデジタル調、透過背景 | `/manus-storage/naika-beneficial-rhinoceros-beetle_b6e64210.png` | 夜ステージでタップ獲得するカブトムシ |
 
