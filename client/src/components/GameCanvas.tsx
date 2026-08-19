@@ -3,7 +3,7 @@
  * DOM HUDは月白の可読性、行灯橙の行動喚起、和紙の薄い質感を使う。
  * Babylon engine lifecycle is guarded for React 19 StrictMode.
  */
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { createGameScene, type BeneficialView, type FrogTongueView, type GameHandle, type HazardView, type HudState, type ItemActivationView, type ItemId, type KobanView, type MosquitoView, type PlacedItemView, type ResultState, type SkillView } from "@/game/scene";
 import { DIFFICULTY_PROFILES, type DifficultyId } from "@/game/difficulty";
@@ -95,6 +95,18 @@ const initialHud: HudState = {
   },
 };
 
+const EnemyDomLayer = memo(function EnemyDomLayer({ mosquitoes }: { mosquitoes: MosquitoView[] }) {
+  return <div className="enemy-dom-layer" aria-live="polite" aria-label={`接近中の蚊 ${mosquitoes.length}匹`}>{mosquitoes.map((mosquito) => <div key={mosquito.id} className={`enemy-dom enemy-dom-${mosquito.type}`} style={{ "--enemy-x": `${((mosquito.x + 4) / 8) * 100}vw`, "--enemy-y": `${((7 - mosquito.y) / 14) * 100}dvh`, "--enemy-sprite": `url(${MOSQUITO_SPRITES[mosquito.type]})`, "--enemy-bank": `${mosquito.bank}deg`, "--enemy-scale": `${mosquito.scale}` } as CSSProperties}><span className="enemy-wing enemy-wing-left" /><span className="enemy-wing enemy-wing-right" /><span className="enemy-body" /><span className="enemy-legs" /></div>)}</div>;
+});
+
+const HazardDomLayer = memo(function HazardDomLayer({ hazards }: { hazards: HazardView[] }) {
+  return <div className="hazard-dom-layer" aria-live="polite" aria-label={`接近中の特殊ギミック ${hazards.length}個`}>{hazards.map((hazard) => <div key={hazard.id} className={`hazard-dom hazard-dom-${hazard.kind}`} style={{ "--hazard-x": `${((hazard.x + 4) / 8) * 100}vw`, "--hazard-y": `${((7 - hazard.y) / 14) * 100}dvh`, "--hazard-sprite": `url(${HAZARD_SPRITES[hazard.kind]})`, "--hazard-angle": `${hazard.angle}rad`, "--hazard-scale": `${hazard.scale}` } as CSSProperties} />)}</div>;
+});
+
+const KobanDomLayer = memo(function KobanDomLayer({ kobans }: { kobans: KobanView[] }) {
+  return <div className="koban-dom-layer" aria-live="polite" aria-label={`回収できる小判 ${kobans.length}枚`}>{kobans.map((koban) => <div key={koban.id} className="koban-dom" style={{ left: `${((koban.x + 4) / 8) * 100}%`, top: `${((7 - koban.y) / 14) * 100}%`, "--koban-asset": `url(${KOBAN_ASSET})` } as CSSProperties}><span>小判</span></div>)}</div>;
+});
+
 const itemCopy: Record<ItemId, { symbol: string; name: string; short: string }> = {
   incense: { symbol: "◉", name: "蚊取り線香", short: "煙で退ける" },
   cat: { symbol: "招", name: "招き猫", short: "蚊を招く" },
@@ -151,10 +163,12 @@ export default function GameCanvas() {
   const stage = STAGE_PRESENTATIONS[difficulty];
   const activeBgm = phase === "title" ? TITLE_BGM : stage.gameplayBgm;
   const displayedSkill = skillCastPreview ? { ...skill, charge: 0, motif: stage.skillMotif, ready: false, casting: true } : skillPreview ? { ...skill, charge: 1, ready: true } : skill;
-  const catActivations = [
+  const catActivations = useMemo(() => [
     ...itemActivations.filter((activation) => activation.item === "cat" && activation.kind === "trigger"),
     ...(activationPreview ? placedItems.filter((item) => item.id === "cat").map((item) => ({ key: `activation-preview-${item.key}`, item: item.id, x: item.x, y: item.y, tone: item.tone, kind: "trigger" as const })) : []),
-  ];
+  ], [activationPreview, itemActivations, placedItems]);
+  const entityDensity = mosquitoes.length + hazards.length + Math.min(kobans.length, 4);
+  const isEntityDense = entityDensity >= 8;
 
   const pulseWindChime = () => {
     setChimePulse(true);
@@ -305,7 +319,7 @@ export default function GameCanvas() {
   };
 
   return (
-    <main className={`night-shell stage-${difficulty} phase-${phase} ${performanceLight ? "performance-light" : ""}`}>
+    <main className={`night-shell stage-${difficulty} phase-${phase} ${performanceLight ? "performance-light" : ""} ${isEntityDense ? "entity-dense" : ""}`}>
       <div className="stage-background" aria-hidden="true" style={{ backgroundImage: `${stage.overlay}, url(${stage.background})` }} />
       <div className={`stage-atmosphere ${difficulty === "night" ? "is-night" : ""}`} aria-hidden="true">
         <span className="stage-contrast-overlay" />
@@ -315,13 +329,13 @@ export default function GameCanvas() {
       <div className="paper-grain" aria-hidden="true" />
       {phase !== "result" && <button type="button" className={`wind-chime-control wind-chime-${difficulty} ${chimePulse ? "is-ringing" : ""}`} aria-label="音量設定を開く" aria-expanded={showAudioSettings} onClick={() => { pulseWindChime(); setShowAudioSettings((open) => !open); }}><img className="wind-chime-art" src={WIND_CHIME_ASSETS[difficulty]} alt="" /></button>}
       {phase !== "result" && showAudioSettings && <aside className="settings-panel wind-chime-settings-panel" aria-label="音量設定"><div className="settings-panel-title">音量設定</div><label><span>BGM</span><output>{Math.round(audioSettings.bgm * 100)}%</output><input type="range" min="0" max="1" step="0.01" value={audioSettings.bgm} onInput={(event) => updateAudioSetting("bgm", event.currentTarget.value)} aria-label="BGM音量" /></label><label><span>効果音</span><output>{Math.round(audioSettings.sfx * 100)}%</output><input type="range" min="0" max="1" step="0.01" value={audioSettings.sfx} onInput={(event) => updateAudioSetting("sfx", event.currentTarget.value)} aria-label="効果音音量" /></label></aside>}
-      {phase === "playing" && <div className="enemy-dom-layer" aria-live="polite" aria-label={`接近中の蚊 ${mosquitoes.length}匹`}>{mosquitoes.map((mosquito) => <div key={mosquito.id} className={`enemy-dom enemy-dom-${mosquito.type}`} style={{ left: `${((mosquito.x + 4) / 8) * 100}%`, top: `${((7 - mosquito.y) / 14) * 100}%`, "--enemy-sprite": `url(${MOSQUITO_SPRITES[mosquito.type]})`, "--enemy-bank": `${mosquito.bank}deg`, "--enemy-scale": `${mosquito.scale}` } as CSSProperties}><span className="enemy-wing enemy-wing-left" /><span className="enemy-wing enemy-wing-right" /><span className="enemy-body" /><span className="enemy-legs" /></div>)}</div>}
-      {phase === "playing" && <div className="hazard-dom-layer" aria-live="polite" aria-label={`接近中の特殊ギミック ${hazards.length}個`}>{hazards.map((hazard) => <div key={hazard.id} className={`hazard-dom hazard-dom-${hazard.kind}`} style={{ left: `${((hazard.x + 4) / 8) * 100}%`, top: `${((7 - hazard.y) / 14) * 100}%`, "--hazard-sprite": `url(${HAZARD_SPRITES[hazard.kind]})`, "--hazard-angle": `${hazard.angle}rad`, "--hazard-scale": `${hazard.scale}` } as CSSProperties} />)}</div>}
+      {phase === "playing" && <EnemyDomLayer mosquitoes={mosquitoes} />}
+      {phase === "playing" && <HazardDomLayer hazards={hazards} />}
       {phase === "playing" && <div className="beneficial-dom-layer" aria-live="polite" aria-label={`飛来中の益虫 ${beneficials.length}匹`}>{beneficials.map((beneficial) => {
         const sprite = BENEFICIAL_SPRITES[beneficial.type];
         return <div key={beneficial.id} className={`beneficial-dom beneficial-${beneficial.type} ${sprite ? "has-beneficial-sprite" : ""}`} style={{ left: `${((beneficial.x + 4) / 8) * 100}%`, top: `${((7 - beneficial.y) / 14) * 100}%`, "--beneficial-atlas": `url(${BENEFICIAL_ATLAS})`, "--beneficial-cell": `${BENEFICIAL_CELL[beneficial.type]}`, "--beneficial-sprite": sprite ? `url(${sprite})` : "none" } as CSSProperties}><span /></div>;
       })}</div>}
-      {phase === "playing" && <div className="koban-dom-layer" aria-live="polite" aria-label={`回収できる小判 ${kobans.length}枚`}>{kobans.map((koban) => <div key={koban.id} className="koban-dom" style={{ left: `${((koban.x + 4) / 8) * 100}%`, top: `${((7 - koban.y) / 14) * 100}%`, "--koban-asset": `url(${KOBAN_ASSET})` } as CSSProperties}><span>小判</span></div>)}</div>}
+      {phase === "playing" && <KobanDomLayer kobans={kobans} />}
       {phase === "playing" && <div className="placed-item-dom-layer" aria-live="polite" aria-label={`設置中の防衛道具 ${placedItems.length}個`}>{placedItems.map((item) => {
         const progress = item.duration === null ? 1 : Math.max(0, Math.min(1, (item.remaining ?? 0) / item.duration));
         const effectStyle = { left: `${((item.x + 4) / 8) * 100}%`, top: `${((7 - item.y) / 14) * 100}%`, "--range-size": `${Math.round(item.range * 68)}px`, "--range-color": item.tone, "--ring-progress": `${Math.round(progress * 360)}deg`, "--defense-atlas": `url(${DEFENSE_ATLAS})`, "--incense-asset": `url(${INCENSE_ASSET})` } as CSSProperties;

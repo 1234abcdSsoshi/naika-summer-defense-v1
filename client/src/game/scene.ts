@@ -238,6 +238,9 @@ class GameWorld {
   private nextHazardSyncAt = 0;
   private nextKobanSyncAt = 0;
   private nextPlacedItemSyncAt = 0;
+  private nextBeneficialSyncAt = 0;
+  private nextHudSyncAt = 0;
+  private nextBuzzAt = 0;
   private readonly telemetry = new GameplayTelemetry();
   private readonly playerRoot: TransformNode;
   private readonly callbacks: GameCallbacks;
@@ -575,6 +578,9 @@ class GameWorld {
     this.nextHazardSyncAt = 0;
     this.nextKobanSyncAt = 0;
     this.nextPlacedItemSyncAt = 0;
+    this.nextBeneficialSyncAt = 0;
+    this.nextHudSyncAt = 0;
+    this.nextBuzzAt = 0;
     this.nextBeneficialAt = this.getBeneficialInterval();
     this.skillCharge = 0;
     this.skillCastUntil = 0;
@@ -597,30 +603,26 @@ class GameWorld {
     const wave = getMosquitoWave({ difficulty: this.difficulty, elapsed: this.now, threat: this.currentThreat });
     const type = forcedType ?? this.mosquitoTypeCheck ?? chooseMosquitoType(wave, this.random());
     this.nextSpawnAt = this.now + wave.spawnInterval;
-    if (!bypassCap && this.mosquitoes.filter((entry) => entry.state !== "falling").length >= wave.activeCap) return;
+    const activeCount = this.mosquitoes.filter((entry) => entry.state !== "falling").length;
+    if (!bypassCap && activeCount >= wave.activeCap) return;
     const info = MOSQUITO_INFO[type];
     const x = -3.35 + this.random() * 6.7;
     const y = 3.45 + this.random() * 0.65;
     const root = new TransformNode(`mosquito-${this.mosquitoId}`, this.scene);
     root.position = new Vector3(x, y, 0.62);
-    this.makeMosquitoSilhouette(`mosquito-ink-${this.mosquitoId}`, type).parent = root;
-    const spriteSize = type === "giant" || type === "tank" ? 1.12 : type === "brood" ? 0.96 : type === "needle" ? 0.84 : type === "swarm" ? 0.9 : type === "dart" || type === "striped" ? 0.78 : type === "fast" ? 0.74 : 0.68;
-    const sprite = this.makeSprite(`mosquito-sprite-${this.mosquitoId}`, ENEMY_SPRITES[type], spriteSize);
-    sprite.parent = root;
-    sprite.position.z = 0.035;
-    // Visible appearance is rendered by the DOM overlay. Hide this legacy
-    // Babylon sprite stack so it cannot read as a second insect or shadow.
+    // 敵の見た目はDOMスプライトだけが担当する。非表示Babylonスプライトを
+    // 作らないことで、高密度時のメッシュ更新・マテリアル負荷を避ける。
     root.setEnabled(false);
     this.mosquitoes.push({ id: this.mosquitoId++, type, hp: info.hp, state: "approaching", x, y, vx: 0, vy: 0, speed: info.speed, biteAt: 0, fallingFor: 0, capturedFor: 0, captureOriginX: x, captureOriginY: y, captureTargetX: x, captureTargetY: y, nextSpecialAt: this.now + (type === "brood" ? 0.9 : type === "needle" ? 1.1 : Number.POSITIVE_INFINITY), mesh: root });
     if (type === "swarm" && !forcedType) {
-      this.spawnMosquito("small", true);
-      this.spawnMosquito("small", true);
+      this.spawnMosquito("small");
     }
     this.emitMosquitoViews(true);
     this.telemetry.track("enemy_spawned", { type, wave: wave.index, threat: Number(this.currentThreat.toFixed(2)), difficulty: this.difficulty });
   }
 
   private spawnHazard(kind: HazardKind, x: number, y: number) {
+    if (!this.hazardCheck && this.hazards.length >= 4) return;
     const root = new TransformNode(`hazard-${kind}-${this.hazardId}`, this.scene);
     root.setEnabled(false);
     const targetY = this.playerY + 0.25;
@@ -666,6 +668,13 @@ class GameWorld {
     return getBeneficialSpawnInterval({ difficulty: this.difficulty, elapsed: this.now, threat: this.currentThreat, random: this.random() });
   }
 
+  private getUiSyncInterval() {
+    const entityPressure = this.mosquitoes.filter((entry) => entry.state !== "falling").length + this.hazards.length + Math.min(this.coinsOnFloor.length, 4);
+    if (entityPressure >= 10) return 0.2;
+    if (entityPressure >= 6) return 0.14;
+    return 0.1;
+  }
+
   private updateBeneficials(delta: number) {
     for (const beneficial of [...this.beneficials]) {
       const age = this.now - beneficial.bornAt;
@@ -689,7 +698,8 @@ class GameWorld {
   }
 
   private emitBeneficialViews(force = false) {
-    if (!force && this.now < this.nextMosquitoSyncAt) return;
+    if (!force && this.now < this.nextBeneficialSyncAt) return;
+    this.nextBeneficialSyncAt = this.now + this.getUiSyncInterval();
     this.callbacks.onBeneficials(this.beneficials.map(({ id, type, x, y, drift }) => ({ id, type, x, y, drift })));
   }
 
@@ -704,8 +714,6 @@ class GameWorld {
       if (mosquito.state === "falling") {
         mosquito.fallingFor += delta;
         mosquito.y -= 4.6 * delta;
-        mosquito.mesh.rotation.z += 8 * delta;
-        mosquito.mesh.position.set(mosquito.x, mosquito.y, 0.45);
         if (mosquito.fallingFor > 0.28) {
           mosquito.mesh.dispose();
           this.mosquitoes = this.mosquitoes.filter((entry) => entry !== mosquito);
@@ -719,9 +727,6 @@ class GameWorld {
         const eased = 1 - Math.pow(1 - progress, 3);
         mosquito.x = mosquito.captureOriginX + (mosquito.captureTargetX - mosquito.captureOriginX) * eased;
         mosquito.y = mosquito.captureOriginY + (mosquito.captureTargetY - mosquito.captureOriginY) * eased;
-        mosquito.mesh.position.set(mosquito.x, mosquito.y, 0.58);
-        mosquito.mesh.rotation.z = Math.sin(this.now * 24 + mosquito.id) * 0.32;
-        mosquito.mesh.scaling.setAll(Math.max(0.45, 1 - progress * 0.42));
         if (progress >= 1) this.killMosquito(mosquito, false);
         continue;
       }
@@ -744,10 +749,6 @@ class GameWorld {
       }
       if (this.mosquitoFlowDemo && mosquito.state === "feeding") mosquito.biteAt = Math.min(mosquito.biteAt, this.now);
       if (mosquito.state === "feeding") {
-        mosquito.mesh.position.y = this.playerY + 0.15 + Math.sin(this.now * 8 + mosquito.id) * 0.06;
-        mosquito.mesh.position.x = Math.sin(this.now * 5 + mosquito.id) * 0.32;
-        mosquito.mesh.rotation.z = Math.sin(this.now * 11 + mosquito.id) * 0.13;
-        mosquito.mesh.scaling.set(1 + Math.sin(this.now * 16 + mosquito.id) * 0.055, 1 + Math.cos(this.now * 16 + mosquito.id) * 0.055, 1);
         if (this.now >= mosquito.biteAt) {
           mosquito.biteAt = this.now + MOSQUITO_BITE_INTERVAL[mosquito.type];
           this.bitePlayer(MOSQUITO_DAMAGE[mosquito.type]);
@@ -769,9 +770,6 @@ class GameWorld {
         mosquito.vy += (desiredVy - mosquito.vy) * steering;
         mosquito.x += mosquito.vx * delta;
         mosquito.y += mosquito.vy * delta;
-        mosquito.mesh.position.set(mosquito.x, mosquito.y, 0.45);
-        mosquito.mesh.rotation.z = Math.max(-0.34, Math.min(0.34, -mosquito.vx * 0.2)) + Math.sin(this.now * 16 + mosquito.id) * 0.06;
-        mosquito.mesh.scaling.set(1 + Math.sin(this.now * 18 + mosquito.id) * 0.045, 1 + Math.cos(this.now * 18 + mosquito.id) * 0.065, 1);
       }
     }
   }
@@ -887,7 +885,7 @@ class GameWorld {
 
   private emitMosquitoViews(force = false) {
     if (!force && this.now < this.nextMosquitoSyncAt) return;
-    this.nextMosquitoSyncAt = this.now + 0.08;
+    this.nextMosquitoSyncAt = this.now + this.getUiSyncInterval();
     this.callbacks.onMosquitoes(this.mosquitoes
       .filter((entry) => entry.state !== "falling")
       .map(({ id, type, x, y, vx }) => ({ id, type, x, y, bank: Math.max(-18, Math.min(18, -vx * 18)), scale: type === "giant" || type === "tank" ? 1.22 : type === "sturdy" || type === "brood" ? 1.16 : type === "fast" || type === "dart" ? 0.9 : 1 })));
@@ -895,13 +893,13 @@ class GameWorld {
 
   private emitHazardViews(force = false) {
     if (!force && this.now < this.nextHazardSyncAt) return;
-    this.nextHazardSyncAt = this.now + 0.08;
+    this.nextHazardSyncAt = this.now + this.getUiSyncInterval();
     this.callbacks.onHazards(this.hazards.map(({ id, kind, x, y, angle }) => ({ id, kind, x, y, angle, scale: kind === "egg" ? 0.8 : kind === "needle" ? 0.75 : 0.9 })));
   }
 
   private emitKobanViews(force = false) {
     if (!force && this.now < this.nextKobanSyncAt) return;
-    this.nextKobanSyncAt = this.now + 0.08;
+    this.nextKobanSyncAt = this.now + this.getUiSyncInterval();
     this.callbacks.onKobans(this.coinsOnFloor.map(({ id, x, y }) => ({ id, x, y })));
   }
 
@@ -970,8 +968,6 @@ class GameWorld {
     this.hits += 1;
     this.spawnVfx("tap", mosquito.x, mosquito.y, 0.84);
     this.telemetry.track("tap_hit", { type: mosquito.type, hpRemaining: mosquito.hp });
-    mosquito.mesh.scaling.setAll(1.34);
-    window.setTimeout(() => mosquito.mesh.scaling.setAll(1), 90);
     this.playTone(660, 0.055, "square", 0.045);
     navigator.vibrate?.(12);
     if (mosquito.hp <= 0) this.killMosquito(mosquito, true);
@@ -1031,7 +1027,6 @@ class GameWorld {
     mosquito.y = this.playerY + 0.76;
     mosquito.vx = 0;
     mosquito.vy = 0;
-    mosquito.mesh.position.set(mosquito.x, mosquito.y, 0.45);
     this.nextSpawnAt = Number.POSITIVE_INFINITY;
     this.emitHud("蚊が寝息へ近づいている…");
   }
@@ -1108,7 +1103,6 @@ class GameWorld {
       if (target && id !== "daruma") {
         target.x = safeX + 1.05;
         target.y = safeY + 0.08;
-        target.mesh.position.set(target.x, target.y, 0.45);
       }
       if (id === "daruma") this.spawnCoin(safeX + 0.42, safeY + 0.08, 1);
     }
@@ -1173,6 +1167,8 @@ class GameWorld {
   }
 
   private emitHud(notice?: string) {
+    if (!notice && this.now < this.nextHudSyncAt) return;
+    this.nextHudSyncAt = this.now + this.getUiSyncInterval();
     const active = (id: ItemId) => this.placed.some((entry) => entry.id === id);
     this.callbacks.onHud({
       health: this.health,
@@ -1423,12 +1419,14 @@ class GameWorld {
     const gain = this.buzzGain;
     const oscillator = this.buzzOscillator;
     const filter = this.buzzFilter;
-    if (!context || context.state !== "running" || !gain || !oscillator || !filter) return;
-    const nearest = this.mosquitoes
-      .filter((entry) => entry.state !== "falling")
-      .map((entry) => distance(entry.x, entry.y, 0, this.playerY))
-      .sort((a, b) => a - b)[0];
-    const proximity = nearest === undefined ? 0 : clamp(1 - nearest / 7.2, 0, 1);
+    if (!context || context.state !== "running" || !gain || !oscillator || !filter || this.now < this.nextBuzzAt) return;
+    this.nextBuzzAt = this.now + 0.12;
+    let nearest = Number.POSITIVE_INFINITY;
+    for (const mosquito of this.mosquitoes) {
+      if (mosquito.state === "falling") continue;
+      nearest = Math.min(nearest, distance(mosquito.x, mosquito.y, 0, this.playerY));
+    }
+    const proximity = Number.isFinite(nearest) ? clamp(1 - nearest / 7.2, 0, 1) : 0;
     const targetGain = 0.0001 + proximity * proximity * 0.075 * this.sfxVolume;
     const tone = 172 + proximity * 116 + Math.sin(this.now * 10) * (4 + proximity * 8);
     gain.gain.setTargetAtTime(targetGain, context.currentTime, 0.065);

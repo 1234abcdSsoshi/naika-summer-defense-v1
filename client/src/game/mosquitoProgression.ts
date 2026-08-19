@@ -22,8 +22,8 @@ const AVAILABLE_TYPES: Record<MosquitoWave["index"], readonly MosquitoType[]> = 
   9: ["small", "fast", "sturdy", "striped", "giant", "brood", "dart", "tank", "needle", "swarm"],
 };
 
-const CAP_BONUS: Record<MosquitoWave["index"], number> = { 0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 5, 7: 6, 8: 6, 9: 7 };
-const INTERVAL_MULTIPLIER: Record<MosquitoWave["index"], number> = { 0: 1, 1: 1, 2: 0.92, 3: 0.86, 4: 0.8, 5: 0.76, 6: 0.72, 7: 0.68, 8: 0.64, 9: 0.6 };
+const CAP_BONUS: Record<MosquitoWave["index"], number> = { 0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 4, 6: 5, 7: 5, 8: 5, 9: 5 };
+const INTERVAL_MULTIPLIER: Record<MosquitoWave["index"], number> = { 0: 1, 1: 1, 2: 0.92, 3: 0.86, 4: 0.82, 5: 0.78, 6: 0.75, 7: 0.72, 8: 0.69, 9: 0.67 };
 
 function getWaveIndex(elapsed: number): MosquitoWave["index"] {
   if (elapsed < 15) return 0;
@@ -45,8 +45,8 @@ export function getMosquitoWave({ difficulty, elapsed, threat }: { difficulty: D
   const pressureBonus = threat > 1.1 ? 1 : 0;
   return {
     index,
-    activeCap: Math.min(12, Math.max(2, profile.activeCaps[profileStage] + CAP_BONUS[index] + pressureBonus)),
-    spawnInterval: Math.max(0.32, (profile.spawnIntervals[profileStage] * INTERVAL_MULTIPLIER[index]) / Math.max(0.75, threat)),
+    activeCap: Math.min(10, Math.max(2, profile.activeCaps[profileStage] + CAP_BONUS[index] + pressureBonus)),
+    spawnInterval: Math.max(0.45, (profile.spawnIntervals[profileStage] * INTERVAL_MULTIPLIER[index]) / Math.max(0.75, threat)),
     availableTypes: AVAILABLE_TYPES[index],
   };
 }

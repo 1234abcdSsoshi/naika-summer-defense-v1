@@ -10,22 +10,35 @@ const mosquitoProgressionSource = readFileSync(resolve(projectRoot, "client/src/
 const stageSource = readFileSync(resolve(projectRoot, "client/src/game/stage.ts"), "utf8");
 
 describe("蚊と小判の描画仕様", () => {
-  it("モバイルでは高DPR描画と保存用バッファを抑え、ゲームビュー同期を間引く", () => {
+  it("モバイルでは高DPR描画と保存用バッファを抑え、高密度時はゲームビュー同期を追加で間引く", () => {
     expect(componentSource).toContain('preserveDrawingBuffer: false, stencil: false, adaptToDeviceRatio: false');
     expect(componentSource).toContain('engine.setHardwareScalingLevel(renderScale)');
-    expect(sceneSource).toContain('this.nextMosquitoSyncAt = this.now + 0.08');
-    expect(sceneSource).toContain('this.nextKobanSyncAt = this.now + 0.08');
+    expect(sceneSource).toContain('private getUiSyncInterval()');
+    expect(sceneSource).toContain('if (entityPressure >= 10) return 0.2');
+    expect(sceneSource).toContain('if (entityPressure >= 6) return 0.14');
+    expect(sceneSource).toContain('this.nextMosquitoSyncAt = this.now + this.getUiSyncInterval()');
+    expect(sceneSource).toContain('this.nextKobanSyncAt = this.now + this.getUiSyncInterval()');
     expect(sceneSource).toContain('private nextPlacedItemSyncAt = 0');
     expect(sceneSource).toContain('this.nextPlacedItemSyncAt = this.now + 0.16');
     expect(sceneSource).toContain('private emitPlacedItemViews(force = false)');
     expect(componentSource).toContain('const [performanceLight] = useState(() => {');
     expect(componentSource).toContain('performanceLight ? "performance-light" : ""');
+    expect(componentSource).toContain('const isEntityDense = entityDensity >= 8');
+    expect(componentSource).toContain('useMemo(() => [');
     expect(styleSource).toContain('.performance-light .skill-cast-vfx');
     expect(styleSource).toContain('.performance-light .skill-vfx-particles { display: none; }');
+    expect(styleSource).toContain('.entity-dense .enemy-dom, .entity-dense .hazard-dom { animation: none; }');
+  });
+
+  it("高密度戦でも特殊蚊の種類を維持しつつ、敵と危険物の上限を安全に抑える", () => {
+    expect(mosquitoProgressionSource).toContain('activeCap: Math.min(10');
+    expect(mosquitoProgressionSource).toContain('spawnInterval: Math.max(0.45');
+    expect(sceneSource).toContain('if (!this.hazardCheck && this.hazards.length >= 4) return;');
+    expect(sceneSource).toContain('if (type === "swarm" && !forcedType) {\n      this.spawnMosquito("small");');
   });
 
   it("小判上の丸いハイライト要素を描画しない", () => {
-    const kobanMarkup = componentSource.match(/koban-dom-layer[\s\S]*?placed-item-dom-layer/)?.[0] ?? "";
+    const kobanMarkup = componentSource.match(/const KobanDomLayer[\s\S]*?\n\}\);/)?.[0] ?? "";
     expect(kobanMarkup).not.toContain("<i />");
     expect(kobanMarkup).not.toMatch(/<i[^>]*>/);
     expect(styleSource).toContain(".koban-dom span, .koban-dom i { display: none; }");
@@ -33,7 +46,7 @@ describe("蚊と小判の描画仕様", () => {
   });
 
   it("最終スタイルで蚊と小判にドロップシャドウを付与しない", () => {
-    const finalEnemyStyle = styleSource.match(/\.enemy-dom \{ width: 52px;[^\n]+/)?.[0] ?? "";
+    const finalEnemyStyle = styleSource.match(/\.enemy-dom \{ left: 0; top: 0; width: 52px;[^\n]+/)?.[0] ?? "";
     const finalKobanStyle = styleSource.match(/\.koban-dom \{ width: 29px;[^\n]+/)?.[0] ?? "";
     expect(finalEnemyStyle).toContain("filter: none");
     expect(finalKobanStyle).toContain("box-shadow: none");
