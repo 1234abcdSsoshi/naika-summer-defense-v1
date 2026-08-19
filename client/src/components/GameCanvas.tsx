@@ -287,7 +287,7 @@ export default function GameCanvas() {
   };
 
   return (
-    <main className={`night-shell stage-${difficulty} ${performanceLight ? "performance-light" : ""}`}>
+    <main className={`night-shell stage-${difficulty} phase-${phase} ${performanceLight ? "performance-light" : ""}`}>
       <div className="stage-background" aria-hidden="true" style={{ backgroundImage: `${stage.overlay}, url(${stage.background})` }} />
       <div className={`stage-atmosphere ${difficulty === "night" ? "is-night" : ""}`} aria-hidden="true">
         <span className="stage-contrast-overlay" />

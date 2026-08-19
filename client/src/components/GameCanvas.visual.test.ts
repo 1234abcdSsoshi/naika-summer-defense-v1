@@ -74,9 +74,11 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).not.toContain('.moon-disc {');
   });
 
-  it("全ステージの背景を180度回転して表示する", () => {
+  it("ゲーム中の背景反転を維持しつつ、ホーム画面は正しい向きで表示する", () => {
     expect(componentSource).toContain('className="stage-background"');
+    expect(componentSource).toContain('phase-${phase}');
     expect(styleSource).toContain('transform: rotate(180deg)');
+    expect(styleSource).toContain('.phase-title .stage-background { transform: none; }');
     expect(styleSource).toContain('.stage-morning .stage-background');
     expect(styleSource).toContain('.stage-night .stage-background');
     expect(styleSource).toContain('background-size: 100% 100%');
