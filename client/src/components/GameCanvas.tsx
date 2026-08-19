@@ -96,11 +96,11 @@ const initialHud: HudState = {
 };
 
 const EnemyDomLayer = memo(function EnemyDomLayer({ mosquitoes }: { mosquitoes: MosquitoView[] }) {
-  return <div className="enemy-dom-layer" aria-live="polite" aria-label={`接近中の蚊 ${mosquitoes.length}匹`}>{mosquitoes.map((mosquito) => <div key={mosquito.id} className={`enemy-dom enemy-dom-${mosquito.type}`} style={{ "--enemy-x": `${((mosquito.x + 4) / 8) * 100}vw`, "--enemy-y": `${((7 - mosquito.y) / 14) * 100}dvh`, "--enemy-sprite": `url(${MOSQUITO_SPRITES[mosquito.type]})`, "--enemy-bank": `${mosquito.bank}deg`, "--enemy-scale": `${mosquito.scale}` } as CSSProperties}><span className="enemy-wing enemy-wing-left" /><span className="enemy-wing enemy-wing-right" /><span className="enemy-body" /><span className="enemy-legs" /></div>)}</div>;
+  return <div className="enemy-dom-layer" aria-live="polite" aria-label={`接近中の蚊 ${mosquitoes.length}匹`}>{mosquitoes.map((mosquito) => <div key={mosquito.id} className={`enemy-dom enemy-dom-${mosquito.type}`} style={{ left: `${((mosquito.x + 4) / 8) * 100}%`, top: `${((7 - mosquito.y) / 14) * 100}%`, "--enemy-sprite": `url(${MOSQUITO_SPRITES[mosquito.type]})`, "--enemy-bank": `${mosquito.bank}deg`, "--enemy-scale": `${mosquito.scale}` } as CSSProperties}><span className="enemy-wing enemy-wing-left" /><span className="enemy-wing enemy-wing-right" /><span className="enemy-body" /><span className="enemy-legs" /></div>)}</div>;
 });
 
 const HazardDomLayer = memo(function HazardDomLayer({ hazards }: { hazards: HazardView[] }) {
-  return <div className="hazard-dom-layer" aria-live="polite" aria-label={`接近中の特殊ギミック ${hazards.length}個`}>{hazards.map((hazard) => <div key={hazard.id} className={`hazard-dom hazard-dom-${hazard.kind}`} style={{ "--hazard-x": `${((hazard.x + 4) / 8) * 100}vw`, "--hazard-y": `${((7 - hazard.y) / 14) * 100}dvh`, "--hazard-sprite": `url(${HAZARD_SPRITES[hazard.kind]})`, "--hazard-angle": `${hazard.angle}rad`, "--hazard-scale": `${hazard.scale}` } as CSSProperties} />)}</div>;
+  return <div className="hazard-dom-layer" aria-live="polite" aria-label={`接近中の特殊ギミック ${hazards.length}個`}>{hazards.map((hazard) => <div key={hazard.id} className={`hazard-dom hazard-dom-${hazard.kind}`} style={{ left: `${((hazard.x + 4) / 8) * 100}%`, top: `${((7 - hazard.y) / 14) * 100}%`, "--hazard-sprite": `url(${HAZARD_SPRITES[hazard.kind]})`, "--hazard-angle": `${hazard.angle}rad`, "--hazard-scale": `${hazard.scale}` } as CSSProperties} />)}</div>;
 });
 
 const KobanDomLayer = memo(function KobanDomLayer({ kobans }: { kobans: KobanView[] }) {

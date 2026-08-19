@@ -46,7 +46,7 @@ describe("蚊と小判の描画仕様", () => {
   });
 
   it("最終スタイルで蚊と小判にドロップシャドウを付与しない", () => {
-    const finalEnemyStyle = styleSource.match(/\.enemy-dom \{ left: 0; top: 0; width: 52px;[^\n]+/)?.[0] ?? "";
+    const finalEnemyStyle = styleSource.match(/\.enemy-dom \{ width: 52px;[^\n]+/)?.[0] ?? "";
     const finalKobanStyle = styleSource.match(/\.koban-dom \{ width: 29px;[^\n]+/)?.[0] ?? "";
     expect(finalEnemyStyle).toContain("filter: none");
     expect(finalKobanStyle).toContain("box-shadow: none");
