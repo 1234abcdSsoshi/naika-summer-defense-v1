@@ -1052,7 +1052,7 @@ class GameWorld {
     coin.mesh.dispose();
     this.coinsOnFloor = this.coinsOnFloor.filter((entry) => entry !== coin);
     this.emitKobanViews(true);
-    this.playInteractionSfx(this.kobanCollectSfx, 0.48, 0, 2, null);
+    this.playInteractionSfx(this.kobanCollectSfx, 0.48, 0.3, 2, null);
     this.telemetry.track("coin_collected", { coins: this.coins, source: notice?.includes("ダルマ") ? "daruma" : "tap" });
     this.emitHud(notice);
   }
