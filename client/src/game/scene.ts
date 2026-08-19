@@ -23,6 +23,7 @@ import "@babylonjs/core/Shaders/standard.fragment";
 import { DIFFICULTY_PROFILES, getAdaptiveThreat, type DifficultyId } from "./difficulty";
 import { GameplayTelemetry, type RunAnalytics } from "./telemetry";
 import { STAGE_PRESENTATIONS, type BeneficialType, type SkillMotif } from "./stage";
+import { BENEFICIAL_CAPTURE_CHARGE, getBeneficialSpawnInterval } from "./beneficialBalance";
 
 const ENEMY_SPRITES: Record<MosquitoType, string> = {
   small: "/manus-storage/naika-mosquito-small-sprite_af4952dd.png",
@@ -511,10 +512,11 @@ class GameWorld {
     this.itemsPlaced = 0;
     this.threatSum = 0;
     this.threatSamples = 0;
+    this.currentThreat = 1;
     this.nextMosquitoSyncAt = 0;
     this.nextKobanSyncAt = 0;
     this.nextPlacedItemSyncAt = 0;
-    this.nextBeneficialAt = this.difficulty === "morning" ? 12 : this.difficulty === "dusk" ? 12 : 13;
+    this.nextBeneficialAt = this.getBeneficialInterval();
     this.skillCharge = 0;
     this.skillCastUntil = 0;
     this.rewardPreviewComplete = false;
@@ -560,7 +562,7 @@ class GameWorld {
 
   private spawnBeneficial() {
     const stage = STAGE_PRESENTATIONS[this.difficulty];
-    const interval = this.difficulty === "morning" ? 12 : this.difficulty === "dusk" ? 12 + this.random() * 3 : 12 + this.random() * 6;
+    const interval = this.getBeneficialInterval();
     this.nextBeneficialAt = this.now + interval;
     const type = stage.beneficial;
     const beneficial: Beneficial = {
@@ -580,6 +582,10 @@ class GameWorld {
     this.emitHud(`${stage.beneficialLabel}が飛んできた。タップで技が早く溜まる`);
   }
 
+  private getBeneficialInterval() {
+    return getBeneficialSpawnInterval({ difficulty: this.difficulty, elapsed: this.now, threat: this.currentThreat, random: this.random() });
+  }
+
   private updateBeneficials(delta: number) {
     for (const beneficial of [...this.beneficials]) {
       const age = this.now - beneficial.bornAt;
@@ -594,7 +600,7 @@ class GameWorld {
   private captureBeneficial(beneficial: Beneficial) {
     if (!this.beneficials.includes(beneficial)) return;
     this.beneficials = this.beneficials.filter((entry) => entry !== beneficial);
-    const captureCharge = beneficial.type === "cicada" ? 0.2 : 0.24;
+    const captureCharge = BENEFICIAL_CAPTURE_CHARGE[beneficial.type];
     this.skillCharge = Math.min(1, this.skillCharge + captureCharge);
     this.playTone(beneficial.type === "cicada" ? 780 : beneficial.type === "dragonfly" ? 940 : 520, 0.16, "sine", 0.05);
     this.emitBeneficialViews(true);

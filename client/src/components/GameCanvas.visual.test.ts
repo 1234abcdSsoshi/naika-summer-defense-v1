@@ -213,8 +213,11 @@ describe("蚊と小判の描画仕様", () => {
     expect(sceneSource).toContain('private spawnBeneficial()');
     expect(sceneSource).toContain('private readonly beneficialCheck = new URLSearchParams(window.location.search).has("beneficial-check")');
     expect(sceneSource).toContain('else if (this.beneficialCheck)');
-    expect(sceneSource).toContain('this.difficulty === "morning" ? 12 : this.difficulty === "dusk" ? 12 + this.random() * 3 : 12 + this.random() * 6');
-    expect(sceneSource).toContain('const captureCharge = beneficial.type === "cicada" ? 0.2 : 0.24');
+    expect(sceneSource).toContain('import { BENEFICIAL_CAPTURE_CHARGE, getBeneficialSpawnInterval } from "./beneficialBalance"');
+    expect(sceneSource).toContain('private getBeneficialInterval()');
+    expect(sceneSource).toContain('return getBeneficialSpawnInterval({ difficulty: this.difficulty, elapsed: this.now, threat: this.currentThreat, random: this.random() })');
+    expect(sceneSource).toContain('this.nextBeneficialAt = this.getBeneficialInterval()');
+    expect(sceneSource).toContain('const captureCharge = BENEFICIAL_CAPTURE_CHARGE[beneficial.type]');
     expect(sceneSource).toContain('this.skillCharge = Math.min(1, this.skillCharge + captureCharge)');
     expect(sceneSource).toContain('this.skillCharge = Math.min(1, this.skillCharge + safeDelta / 60)');
     expect(sceneSource).toContain('activateSkill = () =>');
