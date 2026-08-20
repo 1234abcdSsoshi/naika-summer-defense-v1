@@ -38,5 +38,6 @@
 | Egg hazard | 孵化前の卵 | 琥珀色の卵塊、3Dデジタル調、透過背景 | `/manus-storage/naika-hazard-egg-sprite_a11929c9.png` | 1秒以内にタップして孵化を防ぐ |
 | Larva hazard | 孵化した幼虫 | 殻から出た濃緑の幼虫、3Dデジタル調、透過背景 | `/manus-storage/naika-hazard-larva-sprite_2a7101be.png` | 高速で人へ近づく、撃破しても小判なし |
 | Needle hazard | 飛来する針 | 琥珀先端を持つ細い針、3Dデジタル調、透過背景 | `/manus-storage/naika-hazard-needle-sprite_5ca3d79a.png` | タップ破壊可能、報酬なしの投射物 |
+| Edo recovery medicine | 回復アイテム | 藍の薬袋、琥珀の薬瓶、和紙包みを備えた江戸木版画風の養生薬、透過背景 | `/manus-storage/naika-recovery-edo-medicine_6b13e028.png` | 60秒ごとに出現し、タップで寝息を20回復 |
 
 生成物は必ず使用前に、透過、輪郭、反復可能性、背景とのコントラストを確認する。現行プロトタイプでは、背景とロゴを直接利用し、人物・敵・道具は同一の色・シルエット指針に従ってBabylonの軽量図形として実装している。生成BGMはブラウザの自動再生制約を守るため、ユーザーの開始操作後にだけ再生する。

@@ -5,7 +5,7 @@
  */
 import { memo, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { Engine } from "@babylonjs/core/Engines/engine";
-import { createGameScene, type BeneficialView, type FrogTongueView, type GameHandle, type HazardView, type HudState, type ItemActivationView, type ItemId, type KobanView, type MosquitoView, type PlacedItemView, type ResultState, type SkillView } from "@/game/scene";
+import { createGameScene, type BeneficialView, type FrogTongueView, type GameHandle, type HazardView, type HudState, type ItemActivationView, type ItemId, type KobanView, type MosquitoView, type PlacedItemView, type RecoveryView, type ResultState, type SkillView } from "@/game/scene";
 import { DIFFICULTY_PROFILES, type DifficultyId } from "@/game/difficulty";
 import { getLocalEventSummary } from "@/game/telemetry";
 import { BENEFICIAL_CELL, SKILL_CELL, STAGE_PRESENTATIONS, type BeneficialType } from "@/game/stage";
@@ -14,6 +14,7 @@ const BRAND_MARK = "/manus-storage/naika-mark_1621aaa0.png";
 const TITLE_BGM = "/manus-storage/naika-engawa-title-bgm_bcb74aac.wav";
 const DEFENSE_ATLAS = "/manus-storage/naika-3d-defense-atlas_d5b41c2f.png";
 const KOBAN_ASSET = "/manus-storage/naika-3d-koban-true-alpha_76e66136.png";
+const RECOVERY_ASSET = "/manus-storage/naika-recovery-edo-medicine_6b13e028.png";
 const MOSQUITO_SPRITES: Record<MosquitoView["type"], string> = {
   small: "/manus-storage/naika-mosquito-small-sprite_af4952dd.png",
   fast: "/manus-storage/naika-mosquito-fast-sprite_f65f8e38.png",
@@ -107,6 +108,10 @@ const KobanDomLayer = memo(function KobanDomLayer({ kobans }: { kobans: KobanVie
   return <div className="koban-dom-layer" aria-live="polite" aria-label={`回収できる小判 ${kobans.length}枚`}>{kobans.map((koban) => <div key={koban.id} className="koban-dom" style={{ left: `${((koban.x + 4) / 8) * 100}%`, top: `${((7 - koban.y) / 14) * 100}%`, "--koban-asset": `url(${KOBAN_ASSET})` } as CSSProperties}><span>小判</span></div>)}</div>;
 });
 
+const RecoveryDomLayer = memo(function RecoveryDomLayer({ recoveries }: { recoveries: RecoveryView[] }) {
+  return <div className="recovery-dom-layer" aria-live="polite" aria-label={`回収できる養生薬 ${recoveries.length}個`}>{recoveries.map((recovery) => <div key={recovery.id} className="recovery-dom" style={{ left: `${((recovery.x + 4) / 8) * 100}%`, top: `${((7 - recovery.y) / 14) * 100}%`, "--recovery-asset": `url(${RECOVERY_ASSET})` } as CSSProperties}><span className="recovery-glow" /><span className="recovery-art" /><small>{Math.ceil(recovery.remaining)}秒</small></div>)}</div>;
+});
+
 const itemCopy: Record<ItemId, { symbol: string; name: string; short: string }> = {
   incense: { symbol: "◉", name: "蚊取り線香", short: "煙で退ける" },
   cat: { symbol: "招", name: "招き猫", short: "蚊を招く" },
@@ -139,6 +144,7 @@ export default function GameCanvas() {
   const [mosquitoes, setMosquitoes] = useState<MosquitoView[]>([]);
   const [hazards, setHazards] = useState<HazardView[]>([]);
   const [kobans, setKobans] = useState<KobanView[]>([]);
+  const [recoveries, setRecoveries] = useState<RecoveryView[]>([]);
   const [placedItems, setPlacedItems] = useState<PlacedItemView[]>([]);
   const [frogTongue, setFrogTongue] = useState<FrogTongueView | null>(null);
   const [itemActivations, setItemActivations] = useState<ItemActivationView[]>([]);
@@ -167,7 +173,7 @@ export default function GameCanvas() {
     ...itemActivations.filter((activation) => activation.item === "cat" && activation.kind === "trigger"),
     ...(activationPreview ? placedItems.filter((item) => item.id === "cat").map((item) => ({ key: `activation-preview-${item.key}`, item: item.id, x: item.x, y: item.y, tone: item.tone, kind: "trigger" as const })) : []),
   ], [activationPreview, itemActivations, placedItems]);
-  const entityDensity = mosquitoes.length + hazards.length + Math.min(kobans.length, 4);
+  const entityDensity = mosquitoes.length + hazards.length + Math.min(kobans.length, 4) + recoveries.length;
   const isEntityDense = entityDensity >= 8;
 
   const pulseWindChime = () => {
@@ -189,6 +195,7 @@ export default function GameCanvas() {
       onMosquitoes: setMosquitoes,
       onHazards: setHazards,
       onKobans: setKobans,
+      onRecoveries: setRecoveries,
       onPlacedItems: setPlacedItems,
       onFrogTongue: setFrogTongue,
       onItemActivation: (activation) => {
@@ -222,7 +229,7 @@ export default function GameCanvas() {
       handleRef.current = handle;
       engine.runRenderLoop(() => handle.scene.render());
       const params = new URLSearchParams(window.location.search);
-      if (params.has("visual-check") || params.has("beneficial-check") || params.has("skill-check") || params.has("skill-cast-check") || params.has("frog-coin-check") || params.has("game-over-check") || params.has("game-over-result-check") || params.has("damage-demo") || params.has("mosquito-flow-demo") || params.has("mosquito-flow-result-demo") || params.has("hazard-check") || params.has("mosquito-type-check")) {
+      if (params.has("visual-check") || params.has("beneficial-check") || params.has("recovery-check") || params.has("skill-check") || params.has("skill-cast-check") || params.has("frog-coin-check") || params.has("game-over-check") || params.has("game-over-result-check") || params.has("damage-demo") || params.has("mosquito-flow-demo") || params.has("mosquito-flow-result-demo") || params.has("hazard-check") || params.has("mosquito-type-check")) {
         if (skillStagePreview) handle.setDifficulty(skillStagePreview);
         handle.startRun();
       }
@@ -336,6 +343,7 @@ export default function GameCanvas() {
         return <div key={beneficial.id} className={`beneficial-dom beneficial-${beneficial.type} ${sprite ? "has-beneficial-sprite" : ""}`} style={{ left: `${((beneficial.x + 4) / 8) * 100}%`, top: `${((7 - beneficial.y) / 14) * 100}%`, "--beneficial-atlas": `url(${BENEFICIAL_ATLAS})`, "--beneficial-cell": `${BENEFICIAL_CELL[beneficial.type]}`, "--beneficial-sprite": sprite ? `url(${sprite})` : "none" } as CSSProperties}><span /></div>;
       })}</div>}
       {phase === "playing" && <KobanDomLayer kobans={kobans} />}
+      {phase === "playing" && <RecoveryDomLayer recoveries={recoveries} />}
       {phase === "playing" && <div className="placed-item-dom-layer" aria-live="polite" aria-label={`設置中の防衛道具 ${placedItems.length}個`}>{placedItems.map((item) => {
         const progress = item.duration === null ? 1 : Math.max(0, Math.min(1, (item.remaining ?? 0) / item.duration));
         const effectStyle = { left: `${((item.x + 4) / 8) * 100}%`, top: `${((7 - item.y) / 14) * 100}%`, "--range-size": `${Math.round(item.range * 68)}px`, "--range-color": item.tone, "--ring-progress": `${Math.round(progress * 360)}deg`, "--defense-atlas": `url(${DEFENSE_ATLAS})`, "--incense-asset": `url(${INCENSE_ASSET})` } as CSSProperties;

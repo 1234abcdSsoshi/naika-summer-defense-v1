@@ -67,6 +67,7 @@ export type MosquitoView = { id: number; type: MosquitoType; x: number; y: numbe
 export type HazardKind = keyof typeof HAZARD_SPRITES;
 export type HazardView = { id: number; kind: HazardKind; x: number; y: number; angle: number; scale: number };
 export type KobanView = { id: number; x: number; y: number };
+export type RecoveryView = { id: number; x: number; y: number; remaining: number };
 export type PlacedItemView = { key: string; id: ItemId; x: number; y: number; range: number; duration: number | null; remaining: number | null; tone: string; underlayDisabled: boolean };
 export type FrogTongueView = { itemX: number; itemY: number; targetX: number; targetY: number; nonce: number; phase: "aim" | "pull" };
 export type ItemActivationView = { key: string; item: ItemId; x: number; y: number; tone: string; kind: "placed" | "trigger" };
@@ -78,6 +79,7 @@ export type GameCallbacks = {
   onMosquitoes: (mosquitoes: MosquitoView[]) => void;
   onHazards: (hazards: HazardView[]) => void;
   onKobans: (kobans: KobanView[]) => void;
+  onRecoveries: (recoveries: RecoveryView[]) => void;
   onPlacedItems: (items: PlacedItemView[]) => void;
   onFrogTongue: (tongue: FrogTongueView | null) => void;
   onItemActivation: (activation: ItemActivationView) => void;
@@ -146,6 +148,8 @@ type Coin = {
   attractNotice?: string;
 };
 
+type RecoveryPickup = { id: number; x: number; y: number; bornAt: number; expiresAt: number };
+
 type PlacedItem = {
   id: ItemId;
   x: number;
@@ -163,6 +167,9 @@ type Vfx = { kind: VfxKind; bornAt: number; duration: number; mesh: TransformNod
 type Beneficial = { id: number; type: BeneficialType; x: number; y: number; vx: number; bornAt: number; drift: number };
 const ITEM_CELL: Record<ItemId, number> = { incense: 0, cat: 1, frog: 2, daruma: 3 };
 const VFX_CELL: Record<VfxKind, number> = { tap: 0, seal: 1, smoke: 2, damage: 3 };
+const RECOVERY_INTERVAL_SECONDS = 60;
+const RECOVERY_LIFETIME_SECONDS = 12;
+const RECOVERY_HEALTH_AMOUNT = 20;
 
 const ITEM_INFO: Record<ItemId, { price: number; label: string; color: Color3 }> = {
   incense: { price: 6, label: "蚊取り線香", color: Color3.FromHexString("#98AD5C") },
@@ -219,6 +226,7 @@ class GameWorld {
   private mosquitoes: Mosquito[] = [];
   private hazards: Hazard[] = [];
   private coinsOnFloor: Coin[] = [];
+  private recoveries: RecoveryPickup[] = [];
   private placed: PlacedItem[] = [];
   private vfxs: Vfx[] = [];
   private beneficials: Beneficial[] = [];
@@ -226,7 +234,9 @@ class GameWorld {
   private skillCharge = 0;
   private skillCastUntil = 0;
   private nextBeneficialAt = 10;
+  private nextRecoveryAt = RECOVERY_INTERVAL_SECONDS;
   private beneficialId = 0;
+  private recoveryId = 0;
   private currentThreat = 1;
   private taps = 0;
   private hits = 0;
@@ -238,6 +248,7 @@ class GameWorld {
   private nextMosquitoSyncAt = 0;
   private nextHazardSyncAt = 0;
   private nextKobanSyncAt = 0;
+  private nextRecoverySyncAt = 0;
   private nextPlacedItemSyncAt = 0;
   private nextBeneficialSyncAt = 0;
   private nextHudSyncAt = 0;
@@ -249,6 +260,7 @@ class GameWorld {
   private readonly inspect = new URLSearchParams(window.location.search).has("inspect");
   private readonly visualCheck = new URLSearchParams(window.location.search).has("visual-check");
   private readonly beneficialCheck = new URLSearchParams(window.location.search).has("beneficial-check");
+  private readonly recoveryCheck = new URLSearchParams(window.location.search).has("recovery-check");
   private readonly mosquitoTypeCheck: MosquitoType | null = (() => {
     const type = new URLSearchParams(window.location.search).get("mosquito-type-check");
     return type === "small" || type === "fast" || type === "sturdy" || type === "striped" || type === "giant" || type === "brood" || type === "dart" || type === "tank" || type === "needle" || type === "swarm" ? type : null;
@@ -343,6 +355,10 @@ class GameWorld {
       this.spawnMosquito(this.mosquitoTypeCheck);
       this.nextSpawnAt = Number.POSITIVE_INFINITY;
     }
+    if (this.recoveryCheck) {
+      this.spawnRecoveryPickup();
+      this.nextRecoveryAt = Number.POSITIVE_INFINITY;
+    }
     if (this.visualCheck) {
       if (!this.darumaPreviewPull && !this.darumaCoinCheck) this.spawnMosquito();
       this.spawnCoin(this.darumaCoinCheck ? -1.12 : -1.25, this.darumaCoinCheck ? -0.45 : 1.55, 1);
@@ -433,6 +449,8 @@ class GameWorld {
     this.updateHazards(safeDelta);
     this.updateMosquitoes(safeDelta);
     this.updateBeneficials(safeDelta);
+    if (this.now >= this.nextRecoveryAt) this.spawnRecoveryPickup();
+    this.updateRecoveries();
     this.emitMosquitoViews();
     this.updateMosquitoBuzz();
     this.updateCoins(safeDelta);
@@ -487,6 +505,14 @@ class GameWorld {
       .sort((a, b) => distance(a.x, a.y, x, y) - distance(b.x, b.y, x, y))[0];
     if (beneficial) {
       this.captureBeneficial(beneficial);
+      return;
+    }
+
+    const recovery = this.recoveries
+      .filter((entry) => distance(entry.x, entry.y, x, y) < 0.54)
+      .sort((a, b) => distance(a.x, a.y, x, y) - distance(b.x, b.y, x, y))[0];
+    if (recovery) {
+      this.collectRecovery(recovery);
       return;
     }
 
@@ -554,6 +580,7 @@ class GameWorld {
     this.mosquitoes = [];
     this.hazards = [];
     this.coinsOnFloor = [];
+    this.recoveries = [];
     this.placed = [];
     this.vfxs = [];
     this.beneficials = [];
@@ -578,11 +605,13 @@ class GameWorld {
     this.nextMosquitoSyncAt = 0;
     this.nextHazardSyncAt = 0;
     this.nextKobanSyncAt = 0;
+    this.nextRecoverySyncAt = 0;
     this.nextPlacedItemSyncAt = 0;
     this.nextBeneficialSyncAt = 0;
     this.nextHudSyncAt = 0;
     this.nextBuzzAt = 0;
     this.nextBeneficialAt = this.getBeneficialInterval();
+    this.nextRecoveryAt = RECOVERY_INTERVAL_SECONDS;
     this.skillCharge = 0;
     this.skillCastUntil = 0;
     this.rewardPreviewComplete = false;
@@ -594,6 +623,7 @@ class GameWorld {
     this.callbacks.onMosquitoes([]);
     this.callbacks.onHazards([]);
     this.callbacks.onKobans([]);
+    this.callbacks.onRecoveries([]);
     this.callbacks.onPlacedItems([]);
     this.callbacks.onFrogTongue(null);
     this.callbacks.onBeneficials([]);
@@ -670,7 +700,7 @@ class GameWorld {
   }
 
   private getUiSyncInterval() {
-    const entityPressure = this.mosquitoes.filter((entry) => entry.state !== "falling").length + this.hazards.length + Math.min(this.coinsOnFloor.length, 4);
+    const entityPressure = this.mosquitoes.filter((entry) => entry.state !== "falling").length + this.hazards.length + Math.min(this.coinsOnFloor.length, 4) + this.recoveries.length;
     if (entityPressure >= 10) return 0.2;
     if (entityPressure >= 6) return 0.14;
     return 0.1;
@@ -696,6 +726,50 @@ class GameWorld {
     this.emitBeneficialViews(true);
     this.emitSkill(true);
     this.emitHud(`${STAGE_PRESENTATIONS[this.difficulty].beneficialLabel}を見つけた。技の気配が高まる`);
+  }
+
+  private spawnRecoveryPickup() {
+    this.nextRecoveryAt = this.now + RECOVERY_INTERVAL_SECONDS;
+    const recovery: RecoveryPickup = {
+      id: this.recoveryId++,
+      x: -2.8 + this.random() * 5.6,
+      y: -0.2 + this.random() * 2.65,
+      bornAt: this.now,
+      expiresAt: this.now + RECOVERY_LIFETIME_SECONDS,
+    };
+    this.recoveries = [recovery];
+    this.playTone(470, 0.12, "sine", 0.032);
+    this.emitRecoveryViews(true);
+    this.emitHud("養生薬が現れた。タップすると寝息が回復する");
+  }
+
+  private updateRecoveries() {
+    const active = this.recoveries.filter((recovery) => recovery.expiresAt > this.now);
+    if (active.length !== this.recoveries.length) {
+      this.recoveries = active;
+      this.emitRecoveryViews(true);
+      this.emitHud("養生薬は畳の気配に溶けた");
+      return;
+    }
+    this.emitRecoveryViews();
+  }
+
+  private collectRecovery(recovery: RecoveryPickup) {
+    if (!this.recoveries.includes(recovery)) return;
+    this.recoveries = this.recoveries.filter((entry) => entry !== recovery);
+    const restored = Math.max(0, Math.min(RECOVERY_HEALTH_AMOUNT, 100 - this.health));
+    this.health += restored;
+    this.playTone(680, 0.08, "sine", 0.052);
+    this.playTone(920, 0.16, "triangle", 0.04, 0.07);
+    this.spawnVfx("seal", recovery.x, recovery.y, 0.78);
+    this.emitRecoveryViews(true);
+    this.emitHud(restored > 0 ? `養生薬で寝息が${restored}回復した` : "養生薬を得た。寝息は満ちている");
+  }
+
+  private emitRecoveryViews(force = false) {
+    if (!force && this.now < this.nextRecoverySyncAt) return;
+    this.nextRecoverySyncAt = this.now + this.getUiSyncInterval();
+    this.callbacks.onRecoveries(this.recoveries.map(({ id, x, y, expiresAt }) => ({ id, x, y, remaining: Math.max(0, expiresAt - this.now) })));
   }
 
   private emitBeneficialViews(force = false) {

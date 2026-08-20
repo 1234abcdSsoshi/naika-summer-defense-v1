@@ -301,6 +301,24 @@ describe("蚊と小判の描画仕様", () => {
     expect(sceneSource).toContain('this.playNoiseSweep(0.5, 120, 2800, 0.13)');
   });
 
+  it("江戸木版画風の養生薬が1分ごとに現れ、タップで寝息を20回復する", () => {
+    expect(sceneSource).toContain('onRecoveries: (recoveries: RecoveryView[]) => void');
+    expect(sceneSource).toContain('const RECOVERY_INTERVAL_SECONDS = 60');
+    expect(sceneSource).toContain('const RECOVERY_LIFETIME_SECONDS = 12');
+    expect(sceneSource).toContain('const RECOVERY_HEALTH_AMOUNT = 20');
+    expect(sceneSource).toContain('private readonly recoveryCheck = new URLSearchParams(window.location.search).has("recovery-check")');
+    expect(sceneSource).toContain('if (this.now >= this.nextRecoveryAt) this.spawnRecoveryPickup();');
+    expect(sceneSource).toContain('private collectRecovery(recovery: RecoveryPickup)');
+    expect(sceneSource).toContain('this.health += restored');
+    expect(componentSource).toContain('const RECOVERY_ASSET = "/manus-storage/naika-recovery-edo-medicine_6b13e028.png"');
+    expect(componentSource).toContain('onRecoveries: setRecoveries');
+    expect(componentSource).toContain('params.has("recovery-check")');
+    expect(componentSource).toContain('<RecoveryDomLayer recoveries={recoveries} />');
+    expect(styleSource).toContain('.recovery-dom-layer');
+    expect(styleSource).toContain('.recovery-art');
+    expect(styleSource).toContain('@keyframes recovery-float');
+  });
+
   it("確認専用画面では蚊と小判を同時に表示できる", () => {
     expect(sceneSource).toContain('private readonly visualCheck = new URLSearchParams(window.location.search).has("visual-check")');
     const startRun = sceneSource.match(/startRun = \(\) => \{[\s\S]*?this\.callbacks\.onPhase\("playing"\)/)?.[0] ?? "";
