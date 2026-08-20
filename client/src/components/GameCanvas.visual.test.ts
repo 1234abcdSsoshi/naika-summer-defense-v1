@@ -56,6 +56,26 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain('.settings-switch { display: flex; align-items: center;');
   });
 
+  it("100体負荷テストでは敵を単一Canvasに集約し、Reactの個別敵DOM描画を停止する", () => {
+    expect(sceneSource).toContain('get("stress-mosquitoes")');
+    expect(sceneSource).toContain('value >= 1 && value <= 100 ? value : 0');
+    expect(sceneSource).toContain('this.spawnStressMosquitoes(this.stressMosquitoCount)');
+    expect(sceneSource).toContain('private spawnStressMosquitoes(count: number)');
+    expect(sceneSource).toContain('const columns = 10');
+    expect(sceneSource).toContain('private emitMosquitoFrame()');
+    expect(sceneSource).toContain('if (this.mosquitoes.length < 24) return');
+    expect(sceneSource).toContain('if (entityPressure >= 60) return 0.35');
+    expect(componentSource).toContain('const crowdCanvasRef = useRef<HTMLCanvasElement>(null)');
+    expect(componentSource).toContain('const drawMosquitoCrowd = () =>');
+    expect(componentSource).toContain('const groupStride = views.length >= 60 ? 5 : 1');
+    expect(componentSource).toContain('context.fillText(`×${group.length}`');
+    expect(componentSource).toContain('onMosquitoFrame: (nextMosquitoes) =>');
+    expect(componentSource).toContain('className={`mosquito-crowd-canvas ${isCrowdMode ? "is-active" : ""}`}');
+    expect(componentSource).toContain('!isCrowdMode && <EnemyDomLayer mosquitoes={mosquitoes} />');
+    expect(componentSource).toContain('{stressMosquitoCount}体 / 20群 / 目標60');
+    expect(styleSource).toContain('.mosquito-crowd-canvas { pointer-events: none; position: absolute; z-index: 7;');
+  });
+
   it("高密度戦でも特殊蚊の種類を維持しつつ、敵と危険物の上限を安全に抑える", () => {
     expect(mosquitoProgressionSource).toContain('activeCap: Math.min(10');
     expect(mosquitoProgressionSource).toContain('spawnInterval: Math.max(0.45');

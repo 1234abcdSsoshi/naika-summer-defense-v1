@@ -63,7 +63,8 @@ export type HudState = {
 };
 
 export type ResultState = { score: number; best: number; kills: number; duration: number; analytics?: RunAnalytics };
-export type MosquitoView = { id: number; type: MosquitoType; x: number; y: number; bank: number; scale: number };
+export type MosquitoView = { id: number; type: MosquitoType; x: number; y: number; vx: number; vy: number; bank: number; scale: number };
+export type MosquitoFrame = Pick<MosquitoView, "id" | "type" | "x" | "y" | "vx" | "vy">;
 export type HazardKind = keyof typeof HAZARD_SPRITES;
 export type HazardView = { id: number; kind: HazardKind; x: number; y: number; angle: number; scale: number };
 export type KobanView = { id: number; x: number; y: number };
@@ -77,6 +78,7 @@ export type SkillView = { charge: number; motif: SkillMotif; ready: boolean; cas
 export type GameCallbacks = {
   onHud: (hud: HudState) => void;
   onMosquitoes: (mosquitoes: MosquitoView[]) => void;
+  onMosquitoFrame: (mosquitoes: readonly MosquitoFrame[]) => void;
   onHazards: (hazards: HazardView[]) => void;
   onKobans: (kobans: KobanView[]) => void;
   onRecoveries: (recoveries: RecoveryView[]) => void;
@@ -224,6 +226,7 @@ class GameWorld {
   private hazardId = 0;
   private coinId = 0;
   private mosquitoes: Mosquito[] = [];
+  private mosquitoFrameBuffer: MosquitoFrame[] = [];
   private hazards: Hazard[] = [];
   private coinsOnFloor: Coin[] = [];
   private recoveries: RecoveryPickup[] = [];
@@ -261,6 +264,10 @@ class GameWorld {
   private readonly visualCheck = new URLSearchParams(window.location.search).has("visual-check");
   private readonly beneficialCheck = new URLSearchParams(window.location.search).has("beneficial-check");
   private readonly recoveryCheck = new URLSearchParams(window.location.search).has("recovery-check");
+  private readonly stressMosquitoCount = (() => {
+    const value = Number(new URLSearchParams(window.location.search).get("stress-mosquitoes"));
+    return Number.isInteger(value) && value >= 1 && value <= 100 ? value : 0;
+  })();
   private readonly mosquitoTypeCheck: MosquitoType | null = (() => {
     const type = new URLSearchParams(window.location.search).get("mosquito-type-check");
     return type === "small" || type === "fast" || type === "sturdy" || type === "striped" || type === "giant" || type === "brood" || type === "dart" || type === "tank" || type === "needle" || type === "swarm" ? type : null;
@@ -348,7 +355,13 @@ class GameWorld {
     }
     this.unlockAudio();
     this.running = true;
-    if (this.hazardCheck) {
+    if (this.stressMosquitoCount) {
+      this.spawnStressMosquitoes(this.stressMosquitoCount);
+      this.nextSpawnAt = Number.POSITIVE_INFINITY;
+      this.nextBeneficialAt = Number.POSITIVE_INFINITY;
+      this.nextRecoveryAt = Number.POSITIVE_INFINITY;
+      this.emitHud(`${this.stressMosquitoCount}体負荷テスト。目標 60 FPS`);
+    } else if (this.hazardCheck) {
       this.spawnHazard(this.hazardCheck, this.hazardCheck === "needle" ? 2.9 : 0.5, this.hazardCheck === "needle" ? 2.8 : 1.8);
       this.nextSpawnAt = Number.POSITIVE_INFINITY;
     } else if (this.mosquitoTypeCheck) {
@@ -448,6 +461,7 @@ class GameWorld {
     if (this.now >= this.nextBeneficialAt) this.spawnBeneficial();
     this.updateHazards(safeDelta);
     this.updateMosquitoes(safeDelta);
+    this.emitMosquitoFrame();
     this.updateBeneficials(safeDelta);
     if (this.now >= this.nextRecoveryAt) this.spawnRecoveryPickup();
     this.updateRecoveries();
@@ -630,7 +644,7 @@ class GameWorld {
     this.playerRoot.scaling.setAll(1);
   }
 
-  private spawnMosquito(forcedType?: MosquitoType, bypassCap = false) {
+  private spawnMosquito(forcedType?: MosquitoType, bypassCap = false, deferSync = false) {
     const wave = getMosquitoWave({ difficulty: this.difficulty, elapsed: this.now, threat: this.currentThreat });
     const type = forcedType ?? this.mosquitoTypeCheck ?? chooseMosquitoType(wave, this.random());
     this.nextSpawnAt = this.now + wave.spawnInterval;
@@ -648,8 +662,28 @@ class GameWorld {
     if (type === "swarm" && !forcedType) {
       this.spawnMosquito("small");
     }
+    if (!deferSync) {
+      this.emitMosquitoViews(true);
+      this.telemetry.track("enemy_spawned", { type, wave: wave.index, threat: Number(this.currentThreat.toFixed(2)), difficulty: this.difficulty });
+    }
+  }
+
+  private spawnStressMosquitoes(count: number) {
+    const types: MosquitoType[] = ["small", "fast", "striped", "swarm", "dart"];
+    const columns = 10;
+    for (let index = 0; index < count; index += 1) {
+      const type = types[index % types.length];
+      this.spawnMosquito(type, true, true);
+      const mosquito = this.mosquitoes[this.mosquitoes.length - 1];
+      if (!mosquito) continue;
+      const column = index % columns;
+      const row = Math.floor(index / columns);
+      mosquito.x = -3.45 + column * 0.76 + (row % 2) * 0.08;
+      mosquito.y = 3.95 - row * 0.56;
+      mosquito.vx = 0;
+      mosquito.vy = -mosquito.speed;
+    }
     this.emitMosquitoViews(true);
-    this.telemetry.track("enemy_spawned", { type, wave: wave.index, threat: Number(this.currentThreat.toFixed(2)), difficulty: this.difficulty });
   }
 
   private spawnHazard(kind: HazardKind, x: number, y: number) {
@@ -705,6 +739,7 @@ class GameWorld {
 
   private getUiSyncInterval() {
     const entityPressure = this.getEntityPressure();
+    if (entityPressure >= 60) return 0.35;
     if (entityPressure >= 10) return 0.25;
     if (entityPressure >= 6) return 0.18;
     return 0.12;
@@ -822,7 +857,7 @@ class GameWorld {
       const targetX = cat && mosquito.state !== "feeding" ? cat.x : 0;
       const targetY = cat && mosquito.state !== "feeding" ? cat.y : this.playerY + 0.25;
       const targetDistance = distance(mosquito.x, mosquito.y, targetX, targetY);
-      if (!cat && targetDistance < 0.62) {
+      if (!this.stressMosquitoCount && !cat && targetDistance < 0.62) {
         mosquito.state = "feeding";
         if (!mosquito.biteAt) mosquito.biteAt = this.now + 1.1;
       }
@@ -851,6 +886,25 @@ class GameWorld {
         mosquito.y += mosquito.vy * delta;
       }
     }
+  }
+
+  private emitMosquitoFrame() {
+    if (this.mosquitoes.length < 24) return;
+    let count = 0;
+    for (const mosquito of this.mosquitoes) {
+      if (mosquito.state === "falling") continue;
+      const frame = this.mosquitoFrameBuffer[count] ?? { id: 0, type: "small" as MosquitoType, x: 0, y: 0, vx: 0, vy: 0 };
+      frame.id = mosquito.id;
+      frame.type = mosquito.type;
+      frame.x = mosquito.x;
+      frame.y = mosquito.y;
+      frame.vx = mosquito.vx;
+      frame.vy = mosquito.vy;
+      this.mosquitoFrameBuffer[count] = frame;
+      count += 1;
+    }
+    this.mosquitoFrameBuffer.length = count;
+    this.callbacks.onMosquitoFrame(this.mosquitoFrameBuffer);
   }
 
   private updateHazards(delta: number) {
@@ -970,7 +1024,7 @@ class GameWorld {
     this.nextMosquitoSyncAt = this.now + this.getUiSyncInterval();
     this.callbacks.onMosquitoes(this.mosquitoes
       .filter((entry) => entry.state !== "falling")
-      .map(({ id, type, x, y, vx }) => ({ id, type, x, y, bank: Math.max(-18, Math.min(18, -vx * 18)), scale: type === "giant" || type === "tank" ? 1.22 : type === "sturdy" || type === "brood" ? 1.16 : type === "fast" || type === "dart" ? 0.9 : 1 })));
+      .map(({ id, type, x, y, vx, vy }) => ({ id, type, x, y, vx, vy, bank: Math.max(-18, Math.min(18, -vx * 18)), scale: type === "giant" || type === "tank" ? 1.22 : type === "sturdy" || type === "brood" ? 1.16 : type === "fast" || type === "dart" ? 0.9 : 1 })));
   }
 
   private emitHazardViews(force = false) {

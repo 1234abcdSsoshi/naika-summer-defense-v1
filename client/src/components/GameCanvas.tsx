@@ -5,7 +5,7 @@
  */
 import { memo, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { Engine } from "@babylonjs/core/Engines/engine";
-import { createGameScene, type BeneficialView, type FrogTongueView, type GameHandle, type HazardView, type HudState, type ItemActivationView, type ItemId, type KobanView, type MosquitoView, type PlacedItemView, type RecoveryView, type ResultState, type SkillView } from "@/game/scene";
+import { createGameScene, type BeneficialView, type FrogTongueView, type GameHandle, type HazardView, type HudState, type ItemActivationView, type ItemId, type KobanView, type MosquitoFrame, type MosquitoView, type PlacedItemView, type RecoveryView, type ResultState, type SkillView } from "@/game/scene";
 import { DIFFICULTY_PROFILES, type DifficultyId } from "@/game/difficulty";
 import { getLocalEventSummary } from "@/game/telemetry";
 import { BENEFICIAL_CELL, SKILL_CELL, STAGE_PRESENTATIONS, type BeneficialType } from "@/game/stage";
@@ -97,7 +97,7 @@ const initialHud: HudState = {
 };
 
 const EnemyDomLayer = memo(function EnemyDomLayer({ mosquitoes }: { mosquitoes: MosquitoView[] }) {
-  return <div className="enemy-dom-layer" aria-live="polite" aria-label={`接近中の蚊 ${mosquitoes.length}匹`}>{mosquitoes.map((mosquito) => <div key={mosquito.id} className={`enemy-dom enemy-dom-${mosquito.type}`} style={{ left: `${((mosquito.x + 4) / 8) * 100}%`, top: `${((7 - mosquito.y) / 14) * 100}%`, "--enemy-sprite": `url(${MOSQUITO_SPRITES[mosquito.type]})`, "--enemy-bank": `${mosquito.bank}deg`, "--enemy-scale": `${mosquito.scale}` } as CSSProperties}><span className="enemy-wing enemy-wing-left" /><span className="enemy-wing enemy-wing-right" /><span className="enemy-body" /><span className="enemy-legs" /></div>)}</div>;
+  return <div className="enemy-dom-layer" aria-live="polite" aria-label={`接近中の蚊 ${mosquitoes.length}匹`}>{mosquitoes.map((mosquito) => <div key={mosquito.id} className={`enemy-dom enemy-dom-${mosquito.type}`} style={{ left: `${((mosquito.x + 4) / 8) * 100}%`, top: `${((7 - mosquito.y) / 14) * 100}%`, "--enemy-sprite": `url(${MOSQUITO_SPRITES[mosquito.type]})`, "--enemy-bank": `${mosquito.bank}deg`, "--enemy-scale": `${mosquito.scale}` } as CSSProperties} />)}</div>;
 });
 
 const HazardDomLayer = memo(function HazardDomLayer({ hazards }: { hazards: HazardView[] }) {
@@ -121,9 +121,13 @@ const itemCopy: Record<ItemId, { symbol: string; name: string; short: string }> 
 
 export default function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const crowdCanvasRef = useRef<HTMLCanvasElement>(null);
   const handleRef = useRef<GameHandle | null>(null);
   const bgmRef = useRef<HTMLAudioElement>(null);
   const startedRef = useRef(false);
+  const mosquitoDrawRef = useRef<MosquitoView[]>([]);
+  const crowdModeRef = useRef(false);
+  const mosquitoImageRef = useRef<Partial<Record<MosquitoView["type"], HTMLImageElement>>>({});
   const skillStageParam = new URLSearchParams(window.location.search).get("skill-stage");
   const skillStagePreview: DifficultyId | null = skillStageParam === "morning" || skillStageParam === "dusk" || skillStageParam === "night" ? skillStageParam : null;
   const [phase, setPhase] = useState<"title" | "playing" | "result">("title");
@@ -158,6 +162,7 @@ export default function GameCanvas() {
   const [chimePulse, setChimePulse] = useState(false);
   const [isGameOverWaking, setIsGameOverWaking] = useState(false);
   const [fps, setFps] = useState(0);
+  const stressMosquitoCount = Number(new URLSearchParams(window.location.search).get("stress-mosquitoes")) || 0;
   const activationPreview = new URLSearchParams(window.location.search).has("activation-check");
   const skillPreview = new URLSearchParams(window.location.search).has("skill-check");
   const skillCastPreview = new URLSearchParams(window.location.search).has("skill-cast-check");
@@ -178,6 +183,8 @@ export default function GameCanvas() {
   const placedItemPressure = placedItems.reduce((total, item) => total + (item.id === "incense" ? 2 : 1), 0);
   const entityDensity = mosquitoes.length + hazards.length + Math.min(kobans.length, 4) + recoveries.length + beneficials.length + placedItemPressure + Math.min(catActivations.length, 2);
   const isEntityDense = entityDensity >= 6;
+  const isCrowdMode = mosquitoes.length >= 24;
+  crowdModeRef.current = isCrowdMode;
   const lightEffects = performanceLight || isEntityDense;
 
   const pulseWindChime = () => {
@@ -196,9 +203,65 @@ export default function GameCanvas() {
     let gameOverTimer: number | undefined;
     let fpsFrames = 0;
     let fpsSampleStartedAt = performance.now();
+    let crowdWidth = 0;
+    let crowdHeight = 0;
+    const crowdImages = mosquitoImageRef.current;
+    for (const [type, source] of Object.entries(MOSQUITO_SPRITES) as [MosquitoView["type"], string][]) {
+      const image = new Image();
+      image.decoding = "async";
+      image.src = source;
+      crowdImages[type] = image;
+    }
+    const drawMosquitoCrowd = () => {
+      const crowdCanvas = crowdCanvasRef.current;
+      if (!crowdCanvas) return;
+      const bounds = canvas.getBoundingClientRect();
+      const density = performanceLight ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
+      const width = Math.max(1, Math.round(bounds.width * density));
+      const height = Math.max(1, Math.round(bounds.height * density));
+      if (crowdWidth !== width || crowdHeight !== height) {
+        crowdCanvas.width = width;
+        crowdCanvas.height = height;
+        crowdWidth = width;
+        crowdHeight = height;
+      }
+      const context = crowdCanvas.getContext("2d");
+      if (!context) return;
+      context.setTransform(density, 0, 0, density, 0, 0);
+      context.clearRect(0, 0, bounds.width, bounds.height);
+      if (!crowdModeRef.current) return;
+      const views = mosquitoDrawRef.current;
+      const groupStride = views.length >= 60 ? 5 : 1;
+      for (let start = 0; start < views.length; start += groupStride) {
+        const group = views.slice(start, start + groupStride);
+        const mosquito = group[0];
+        if (!mosquito) continue;
+        const image = crowdImages[mosquito.type];
+        if (!image?.complete || !image.naturalWidth) continue;
+        const x = (group.reduce((sum, entry) => sum + entry.x, 0) / group.length + 4) / 8 * bounds.width;
+        const y = (7 - group.reduce((sum, entry) => sum + entry.y, 0) / group.length) / 14 * bounds.height;
+        const size = (mosquito.type === "giant" || mosquito.type === "tank" ? 62 : mosquito.type === "sturdy" || mosquito.type === "brood" ? 56 : 48) * (mosquito.type === "fast" || mosquito.type === "dart" ? 0.9 : 1) * (groupStride > 1 ? 1.18 : 1);
+        context.save();
+        context.translate(x, y);
+        context.rotate(Math.max(-0.32, Math.min(0.32, -mosquito.vx * 0.3)));
+        context.drawImage(image, -size / 2, -size / 2, size, size);
+        if (groupStride > 1) {
+          context.fillStyle = "rgba(245, 240, 223, 0.88)";
+          context.font = "9px ui-monospace, monospace";
+          context.fillText(`×${group.length}`, size * 0.28, -size * 0.26);
+        }
+        context.restore();
+      }
+    };
     createGameScene(engine, canvas, {
       onHud: setHud,
-      onMosquitoes: setMosquitoes,
+      onMosquitoes: (nextMosquitoes) => {
+        mosquitoDrawRef.current = nextMosquitoes;
+        setMosquitoes(nextMosquitoes);
+      },
+      onMosquitoFrame: (nextMosquitoes) => {
+        mosquitoDrawRef.current = nextMosquitoes as MosquitoView[];
+      },
       onHazards: setHazards,
       onKobans: setKobans,
       onRecoveries: setRecoveries,
@@ -235,6 +298,7 @@ export default function GameCanvas() {
       handleRef.current = handle;
       engine.runRenderLoop(() => {
         handle.scene.render();
+        drawMosquitoCrowd();
         fpsFrames += 1;
         const now = performance.now();
         const elapsed = now - fpsSampleStartedAt;
@@ -245,7 +309,7 @@ export default function GameCanvas() {
         }
       });
       const params = new URLSearchParams(window.location.search);
-      if (params.has("visual-check") || params.has("beneficial-check") || params.has("recovery-check") || params.has("skill-check") || params.has("skill-cast-check") || params.has("frog-coin-check") || params.has("game-over-check") || params.has("game-over-result-check") || params.has("damage-demo") || params.has("mosquito-flow-demo") || params.has("mosquito-flow-result-demo") || params.has("hazard-check") || params.has("mosquito-type-check")) {
+      if (params.has("visual-check") || params.has("beneficial-check") || params.has("recovery-check") || params.has("skill-check") || params.has("skill-cast-check") || params.has("frog-coin-check") || params.has("game-over-check") || params.has("game-over-result-check") || params.has("damage-demo") || params.has("mosquito-flow-demo") || params.has("mosquito-flow-result-demo") || params.has("hazard-check") || params.has("mosquito-type-check") || params.has("stress-mosquitoes")) {
         if (skillStagePreview) handle.setDifficulty(skillStagePreview);
         handle.startRun();
       }
@@ -353,10 +417,11 @@ export default function GameCanvas() {
       </div>
       <audio key={activeBgm} ref={bgmRef} src={activeBgm} loop preload="auto" />
       <canvas ref={canvasRef} onPointerMove={updatePlacementPreview} className="game-canvas" aria-label="内蚊のゲーム画面" style={{ touchAction: "none" }} />
+      {phase === "playing" && <canvas ref={crowdCanvasRef} className={`mosquito-crowd-canvas ${isCrowdMode ? "is-active" : ""}`} aria-hidden="true" />}
       <div className="paper-grain" aria-hidden="true" />
       {phase !== "result" && <button type="button" className={`wind-chime-control wind-chime-${difficulty} ${chimePulse ? "is-ringing" : ""}`} aria-label="音量設定を開く" aria-expanded={showAudioSettings} onClick={() => { pulseWindChime(); setShowAudioSettings((open) => !open); }}><img className="wind-chime-art" src={WIND_CHIME_ASSETS[difficulty]} alt="" /></button>}
       {phase !== "result" && showAudioSettings && <aside className="settings-panel wind-chime-settings-panel" aria-label="設定"><div className="settings-panel-title">設定</div><label><span>BGM</span><output>{Math.round(audioSettings.bgm * 100)}%</output><input type="range" min="0" max="1" step="0.01" value={audioSettings.bgm} onInput={(event) => updateAudioSetting("bgm", event.currentTarget.value)} aria-label="BGM音量" /></label><label><span>効果音</span><output>{Math.round(audioSettings.sfx * 100)}%</output><input type="range" min="0" max="1" step="0.01" value={audioSettings.sfx} onInput={(event) => updateAudioSetting("sfx", event.currentTarget.value)} aria-label="効果音音量" /></label><div className="settings-switch"><span>FPS表示</span><button type="button" role="switch" aria-checked={showFps} aria-label="FPS表示" onClick={() => updateFpsVisibility(!showFps)}>{showFps ? "オン" : "オフ"}</button></div></aside>}
-      {phase === "playing" && <EnemyDomLayer mosquitoes={mosquitoes} />}
+      {phase === "playing" && !isCrowdMode && <EnemyDomLayer mosquitoes={mosquitoes} />}
       {phase === "playing" && <HazardDomLayer hazards={hazards} />}
       {phase === "playing" && <div className="beneficial-dom-layer" aria-live="polite" aria-label={`飛来中の益虫 ${beneficials.length}匹`}>{beneficials.map((beneficial) => {
         const sprite = BENEFICIAL_SPRITES[beneficial.type];
@@ -386,7 +451,7 @@ export default function GameCanvas() {
         ))}
       </div>}
 
-      {phase === "playing" && showFps && <div className="fps-hud" aria-label={`現在のフレームレート ${fps} FPS`}><span>FPS</span><strong>{fps || "--"}</strong></div>}
+      {phase === "playing" && showFps && <div className="fps-hud" aria-label={`現在のフレームレート ${fps} FPS`}><span>FPS</span><strong>{fps || "--"}</strong>{stressMosquitoCount > 0 && <small>{stressMosquitoCount}体 / 20群 / 目標60</small>}</div>}
       {phase !== "title" && (
         <div className="hud" aria-live="polite">
           <div className="hud-top">
