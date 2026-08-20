@@ -122,7 +122,7 @@ type Mosquito = {
   captureTargetX: number;
   captureTargetY: number;
   nextSpecialAt: number;
-  mesh: TransformNode;
+  mesh: TransformNode | null;
 };
 
 type Hazard = {
@@ -266,7 +266,7 @@ class GameWorld {
   private readonly recoveryCheck = new URLSearchParams(window.location.search).has("recovery-check");
   private readonly stressMosquitoCount = (() => {
     const value = Number(new URLSearchParams(window.location.search).get("stress-mosquitoes"));
-    return Number.isInteger(value) && value >= 1 && value <= 100 ? value : 0;
+    return Number.isInteger(value) && value >= 1 && value <= 1000 ? value : 0;
   })();
   private readonly mosquitoTypeCheck: MosquitoType | null = (() => {
     const type = new URLSearchParams(window.location.search).get("mosquito-type-check");
@@ -450,7 +450,7 @@ class GameWorld {
       if (frog && target) {
         target.x = frog.x + 1.05;
         target.y = frog.y + 0.05;
-        target.mesh.position.set(target.x, target.y, 0.45);
+        target.mesh?.position.set(target.x, target.y, 0.45);
         frog.nextActionAt = this.now;
         this.frogPreviewComplete = true;
       }
@@ -574,7 +574,7 @@ class GameWorld {
 
   dispose = () => {
     window.removeEventListener("naika-audio-settings", this.onAudioSettings);
-    this.mosquitoes.forEach((entry) => entry.mesh.dispose());
+    this.mosquitoes.forEach((entry) => entry.mesh?.dispose());
     this.hazards.forEach((entry) => entry.mesh.dispose());
     this.coinsOnFloor.forEach((entry) => entry.mesh.dispose());
     this.placed.forEach((entry) => entry.mesh.dispose());
@@ -586,7 +586,7 @@ class GameWorld {
   };
 
   private resetRun() {
-    this.mosquitoes.forEach((entry) => entry.mesh.dispose());
+    this.mosquitoes.forEach((entry) => entry.mesh?.dispose());
     this.hazards.forEach((entry) => entry.mesh.dispose());
     this.coinsOnFloor.forEach((entry) => entry.mesh.dispose());
     this.placed.forEach((entry) => entry.mesh.dispose());
@@ -670,18 +670,16 @@ class GameWorld {
 
   private spawnStressMosquitoes(count: number) {
     const types: MosquitoType[] = ["small", "fast", "striped", "swarm", "dart"];
-    const columns = 10;
+    const columns = 25;
     for (let index = 0; index < count; index += 1) {
       const type = types[index % types.length];
-      this.spawnMosquito(type, true, true);
-      const mosquito = this.mosquitoes[this.mosquitoes.length - 1];
-      if (!mosquito) continue;
+      const info = MOSQUITO_INFO[type];
       const column = index % columns;
       const row = Math.floor(index / columns);
-      mosquito.x = -3.45 + column * 0.76 + (row % 2) * 0.08;
-      mosquito.y = 3.95 - row * 0.56;
-      mosquito.vx = 0;
-      mosquito.vy = -mosquito.speed;
+      const x = -3.72 + column * 0.31 + (row % 2) * 0.04;
+      const y = 4.05 - row * 0.19;
+      const speed = info.speed * MOSQUITO_SPEED_MULTIPLIER;
+      this.mosquitoes.push({ id: this.mosquitoId++, type, hp: info.hp, state: "approaching", x, y, vx: 0, vy: -speed, speed, biteAt: 0, fallingFor: 0, capturedFor: 0, captureOriginX: x, captureOriginY: y, captureTargetX: x, captureTargetY: y, nextSpecialAt: Number.POSITIVE_INFINITY, mesh: null });
     }
     this.emitMosquitoViews(true);
   }
@@ -734,6 +732,7 @@ class GameWorld {
   }
 
   private getEntityPressure() {
+    if (this.stressMosquitoCount) return this.stressMosquitoCount;
     return this.mosquitoes.filter((entry) => entry.state !== "falling").length + this.hazards.length + Math.min(this.coinsOnFloor.length, 4) + this.recoveries.length + this.beneficials.length + this.placed.length * 2;
   }
 
@@ -824,12 +823,23 @@ class GameWorld {
   }
 
   private updateMosquitoes(delta: number) {
+    if (this.stressMosquitoCount) {
+      for (const mosquito of this.mosquitoes) {
+        mosquito.y -= mosquito.speed * delta;
+        mosquito.x += Math.sin(this.now * 1.6 + mosquito.id * 0.13) * delta * 0.045;
+        if (mosquito.y < -3.72) {
+          mosquito.y = 4.08;
+          mosquito.x = -3.72 + (mosquito.id % 25) * 0.31;
+        }
+      }
+      return;
+    }
     for (const mosquito of [...this.mosquitoes]) {
       if (mosquito.state === "falling") {
         mosquito.fallingFor += delta;
         mosquito.y -= 4.6 * delta;
         if (mosquito.fallingFor > 0.28) {
-          mosquito.mesh.dispose();
+          mosquito.mesh?.dispose();
           this.mosquitoes = this.mosquitoes.filter((entry) => entry !== mosquito);
         }
         continue;
@@ -1022,7 +1032,8 @@ class GameWorld {
   private emitMosquitoViews(force = false) {
     if (!force && this.now < this.nextMosquitoSyncAt) return;
     this.nextMosquitoSyncAt = this.now + this.getUiSyncInterval();
-    this.callbacks.onMosquitoes(this.mosquitoes
+    const source = this.stressMosquitoCount ? this.mosquitoes.slice(0, 24) : this.mosquitoes;
+    this.callbacks.onMosquitoes(source
       .filter((entry) => entry.state !== "falling")
       .map(({ id, type, x, y, vx, vy }) => ({ id, type, x, y, vx, vy, bank: Math.max(-18, Math.min(18, -vx * 18)), scale: type === "giant" || type === "tank" ? 1.22 : type === "sturdy" || type === "brood" ? 1.16 : type === "fast" || type === "dart" ? 0.9 : 1 })));
   }
@@ -1553,6 +1564,10 @@ class GameWorld {
   }
 
   private updateMosquitoBuzz() {
+    if (this.stressMosquitoCount) {
+      this.stopMosquitoBuzz();
+      return;
+    }
     if (this.now < 3 || this.now >= 13) {
       this.stopMosquitoBuzz();
       return;

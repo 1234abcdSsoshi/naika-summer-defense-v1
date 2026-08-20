@@ -163,6 +163,7 @@ export default function GameCanvas() {
   const [isGameOverWaking, setIsGameOverWaking] = useState(false);
   const [fps, setFps] = useState(0);
   const stressMosquitoCount = Number(new URLSearchParams(window.location.search).get("stress-mosquitoes")) || 0;
+  const stressGroupCount = stressMosquitoCount >= 500 ? Math.ceil(stressMosquitoCount / 25) : stressMosquitoCount >= 60 ? Math.ceil(stressMosquitoCount / 5) : stressMosquitoCount;
   const activationPreview = new URLSearchParams(window.location.search).has("activation-check");
   const skillPreview = new URLSearchParams(window.location.search).has("skill-check");
   const skillCastPreview = new URLSearchParams(window.location.search).has("skill-cast-check");
@@ -205,6 +206,9 @@ export default function GameCanvas() {
     let fpsSampleStartedAt = performance.now();
     let crowdWidth = 0;
     let crowdHeight = 0;
+    let crowdDisplayWidth = 0;
+    let crowdDisplayHeight = 0;
+    let crowdDensity = 1;
     const crowdImages = mosquitoImageRef.current;
     for (const [type, source] of Object.entries(MOSQUITO_SPRITES) as [MosquitoView["type"], string][]) {
       const image = new Image();
@@ -212,35 +216,44 @@ export default function GameCanvas() {
       image.src = source;
       crowdImages[type] = image;
     }
-    const drawMosquitoCrowd = () => {
+    const resizeMosquitoCrowd = () => {
       const crowdCanvas = crowdCanvasRef.current;
       if (!crowdCanvas) return;
       const bounds = canvas.getBoundingClientRect();
-      const density = performanceLight ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
-      const width = Math.max(1, Math.round(bounds.width * density));
-      const height = Math.max(1, Math.round(bounds.height * density));
+      crowdDensity = performanceLight ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
+      crowdDisplayWidth = bounds.width;
+      crowdDisplayHeight = bounds.height;
+      const width = Math.max(1, Math.round(crowdDisplayWidth * crowdDensity));
+      const height = Math.max(1, Math.round(crowdDisplayHeight * crowdDensity));
       if (crowdWidth !== width || crowdHeight !== height) {
         crowdCanvas.width = width;
         crowdCanvas.height = height;
         crowdWidth = width;
         crowdHeight = height;
       }
+    };
+    const drawMosquitoCrowd = () => {
+      const crowdCanvas = crowdCanvasRef.current;
+      if (!crowdCanvas) return;
+      if (!crowdWidth || !crowdHeight) resizeMosquitoCrowd();
       const context = crowdCanvas.getContext("2d");
       if (!context) return;
-      context.setTransform(density, 0, 0, density, 0, 0);
-      context.clearRect(0, 0, bounds.width, bounds.height);
+      context.setTransform(crowdDensity, 0, 0, crowdDensity, 0, 0);
+      context.clearRect(0, 0, crowdDisplayWidth, crowdDisplayHeight);
       if (!crowdModeRef.current) return;
       const views = mosquitoDrawRef.current;
-      const groupStride = views.length >= 60 ? 5 : 1;
+      const groupStride = views.length >= 500 ? 25 : views.length >= 60 ? 5 : 1;
       for (let start = 0; start < views.length; start += groupStride) {
         const group = views.slice(start, start + groupStride);
         const mosquito = group[0];
         if (!mosquito) continue;
         const image = crowdImages[mosquito.type];
         if (!image?.complete || !image.naturalWidth) continue;
-        const x = (group.reduce((sum, entry) => sum + entry.x, 0) / group.length + 4) / 8 * bounds.width;
-        const y = (7 - group.reduce((sum, entry) => sum + entry.y, 0) / group.length) / 14 * bounds.height;
-        const size = (mosquito.type === "giant" || mosquito.type === "tank" ? 62 : mosquito.type === "sturdy" || mosquito.type === "brood" ? 56 : 48) * (mosquito.type === "fast" || mosquito.type === "dart" ? 0.9 : 1) * (groupStride > 1 ? 1.18 : 1);
+        const clusterIndex = Math.floor(start / groupStride);
+        const clusterColumns = groupStride >= 25 ? 8 : 1;
+        const x = groupStride >= 25 ? (0.1 + (clusterIndex % clusterColumns) * 0.115) * crowdDisplayWidth : (group.reduce((sum, entry) => sum + entry.x, 0) / group.length + 4) / 8 * crowdDisplayWidth;
+        const y = groupStride >= 25 ? (0.2 + Math.floor(clusterIndex / clusterColumns) * 0.125) * crowdDisplayHeight : (7 - group.reduce((sum, entry) => sum + entry.y, 0) / group.length) / 14 * crowdDisplayHeight;
+        const size = (mosquito.type === "giant" || mosquito.type === "tank" ? 62 : mosquito.type === "sturdy" || mosquito.type === "brood" ? 56 : 48) * (mosquito.type === "fast" || mosquito.type === "dart" ? 0.9 : 1) * (groupStride >= 25 ? 0.78 : groupStride > 1 ? 1.18 : 1);
         context.save();
         context.translate(x, y);
         context.rotate(Math.max(-0.32, Math.min(0.32, -mosquito.vx * 0.3)));
@@ -314,7 +327,10 @@ export default function GameCanvas() {
         handle.startRun();
       }
     });
-    const resize = () => engine.resize();
+    const resize = () => {
+      engine.resize();
+      resizeMosquitoCrowd();
+    };
     window.addEventListener("resize", resize);
     return () => {
       disposed = true;
@@ -451,7 +467,7 @@ export default function GameCanvas() {
         ))}
       </div>}
 
-      {phase === "playing" && showFps && <div className="fps-hud" aria-label={`現在のフレームレート ${fps} FPS`}><span>FPS</span><strong>{fps || "--"}</strong>{stressMosquitoCount > 0 && <small>{stressMosquitoCount}体 / 20群 / 目標60</small>}</div>}
+      {phase === "playing" && showFps && <div className="fps-hud" aria-label={`現在のフレームレート ${fps} FPS`}><span>FPS</span><strong>{fps || "--"}</strong>{stressMosquitoCount > 0 && <small>{stressMosquitoCount}体 / {stressGroupCount}群 / 目標60</small>}</div>}
       {phase !== "title" && (
         <div className="hud" aria-live="polite">
           <div className="hud-top">
