@@ -248,8 +248,9 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain(".skill-meter small { display: none; }");
     expect(styleSource).toContain(".skill-core button { position: relative; display: grid; place-items: center; width: 100%; height: 100%; overflow: hidden; padding: 0;");
     expect(styleSource).toContain("border-radius: 50%;");
-    expect(styleSource).toContain(".skill-core { position: absolute; top: 27%; left: 50%");
-    expect(styleSource).toContain("transform: translate(-50%, -50%)");
+    expect(styleSource).toContain(".skill-core { position: absolute; bottom: 145px; left: 50%; z-index: 9");
+    expect(styleSource).toContain("transform: translate(-50%, 50%)");
+    expect(styleSource).toContain(".skill-core { top: auto; bottom: 145px; left: 50%; width: 84px; height: 84px; transform: translate(-50%, 50%);");
     expect(styleSource).not.toContain(".skill-ring {");
     expect(componentSource).toContain('const skillPreview = new URLSearchParams(window.location.search).has("skill-check")');
     expect(componentSource).toContain('const skillStageParam = new URLSearchParams(window.location.search).get("skill-stage")');
