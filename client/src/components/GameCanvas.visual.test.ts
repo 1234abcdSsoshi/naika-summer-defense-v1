@@ -46,6 +46,16 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain('.fps-hud { pointer-events: none; position: absolute; z-index: 10;');
   });
 
+  it("設定画面からFPS表示を保存付きでオン・オフできる", () => {
+    expect(componentSource).toContain('localStorage.getItem("naika-show-fps") !== "false"');
+    expect(componentSource).toContain('const updateFpsVisibility = (visible: boolean) =>');
+    expect(componentSource).toContain('localStorage.setItem("naika-show-fps", String(visible))');
+    expect(componentSource).toContain('role="switch" aria-checked={showFps}');
+    expect(componentSource).toContain('onClick={() => updateFpsVisibility(!showFps)}');
+    expect(componentSource).toContain('phase === "playing" && showFps && <div className="fps-hud"');
+    expect(styleSource).toContain('.settings-switch { display: flex; align-items: center;');
+  });
+
   it("高密度戦でも特殊蚊の種類を維持しつつ、敵と危険物の上限を安全に抑える", () => {
     expect(mosquitoProgressionSource).toContain('activeCap: Math.min(10');
     expect(mosquitoProgressionSource).toContain('spawnInterval: Math.max(0.45');

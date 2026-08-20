@@ -135,6 +135,7 @@ export default function GameCanvas() {
     bgm: Number(localStorage.getItem("naika-bgm-volume") ?? "0.10"),
     sfx: Number(localStorage.getItem("naika-sfx-volume") ?? "1"),
   }));
+  const [showFps, setShowFps] = useState(() => new URLSearchParams(window.location.search).has("fps-check") || localStorage.getItem("naika-show-fps") !== "false");
   const [performanceLight] = useState(() => {
     const device = navigator as Navigator & { deviceMemory?: number };
     return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
@@ -318,6 +319,10 @@ export default function GameCanvas() {
     if (kind === "bgm" && bgmRef.current) bgmRef.current.volume = value;
     window.dispatchEvent(new CustomEvent("naika-audio-settings", { detail: next }));
   };
+  const updateFpsVisibility = (visible: boolean) => {
+    setShowFps(visible);
+    localStorage.setItem("naika-show-fps", String(visible));
+  };
   const chooseDifficulty = (nextDifficulty: DifficultyId) => {
     setDifficulty(nextDifficulty);
     handleRef.current?.setDifficulty(nextDifficulty);
@@ -350,7 +355,7 @@ export default function GameCanvas() {
       <canvas ref={canvasRef} onPointerMove={updatePlacementPreview} className="game-canvas" aria-label="内蚊のゲーム画面" style={{ touchAction: "none" }} />
       <div className="paper-grain" aria-hidden="true" />
       {phase !== "result" && <button type="button" className={`wind-chime-control wind-chime-${difficulty} ${chimePulse ? "is-ringing" : ""}`} aria-label="音量設定を開く" aria-expanded={showAudioSettings} onClick={() => { pulseWindChime(); setShowAudioSettings((open) => !open); }}><img className="wind-chime-art" src={WIND_CHIME_ASSETS[difficulty]} alt="" /></button>}
-      {phase !== "result" && showAudioSettings && <aside className="settings-panel wind-chime-settings-panel" aria-label="音量設定"><div className="settings-panel-title">音量設定</div><label><span>BGM</span><output>{Math.round(audioSettings.bgm * 100)}%</output><input type="range" min="0" max="1" step="0.01" value={audioSettings.bgm} onInput={(event) => updateAudioSetting("bgm", event.currentTarget.value)} aria-label="BGM音量" /></label><label><span>効果音</span><output>{Math.round(audioSettings.sfx * 100)}%</output><input type="range" min="0" max="1" step="0.01" value={audioSettings.sfx} onInput={(event) => updateAudioSetting("sfx", event.currentTarget.value)} aria-label="効果音音量" /></label></aside>}
+      {phase !== "result" && showAudioSettings && <aside className="settings-panel wind-chime-settings-panel" aria-label="設定"><div className="settings-panel-title">設定</div><label><span>BGM</span><output>{Math.round(audioSettings.bgm * 100)}%</output><input type="range" min="0" max="1" step="0.01" value={audioSettings.bgm} onInput={(event) => updateAudioSetting("bgm", event.currentTarget.value)} aria-label="BGM音量" /></label><label><span>効果音</span><output>{Math.round(audioSettings.sfx * 100)}%</output><input type="range" min="0" max="1" step="0.01" value={audioSettings.sfx} onInput={(event) => updateAudioSetting("sfx", event.currentTarget.value)} aria-label="効果音音量" /></label><div className="settings-switch"><span>FPS表示</span><button type="button" role="switch" aria-checked={showFps} aria-label="FPS表示" onClick={() => updateFpsVisibility(!showFps)}>{showFps ? "オン" : "オフ"}</button></div></aside>}
       {phase === "playing" && <EnemyDomLayer mosquitoes={mosquitoes} />}
       {phase === "playing" && <HazardDomLayer hazards={hazards} />}
       {phase === "playing" && <div className="beneficial-dom-layer" aria-live="polite" aria-label={`飛来中の益虫 ${beneficials.length}匹`}>{beneficials.map((beneficial) => {
@@ -381,7 +386,7 @@ export default function GameCanvas() {
         ))}
       </div>}
 
-      {phase === "playing" && <div className="fps-hud" aria-label={`現在のフレームレート ${fps} FPS`}><span>FPS</span><strong>{fps || "--"}</strong></div>}
+      {phase === "playing" && showFps && <div className="fps-hud" aria-label={`現在のフレームレート ${fps} FPS`}><span>FPS</span><strong>{fps || "--"}</strong></div>}
       {phase !== "title" && (
         <div className="hud" aria-live="polite">
           <div className="hud-top">
