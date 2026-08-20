@@ -173,8 +173,10 @@ export default function GameCanvas() {
     ...itemActivations.filter((activation) => activation.item === "cat" && activation.kind === "trigger"),
     ...(activationPreview ? placedItems.filter((item) => item.id === "cat").map((item) => ({ key: `activation-preview-${item.key}`, item: item.id, x: item.x, y: item.y, tone: item.tone, kind: "trigger" as const })) : []),
   ], [activationPreview, itemActivations, placedItems]);
-  const entityDensity = mosquitoes.length + hazards.length + Math.min(kobans.length, 4) + recoveries.length;
-  const isEntityDense = entityDensity >= 8;
+  const placedItemPressure = placedItems.reduce((total, item) => total + (item.id === "incense" ? 2 : 1), 0);
+  const entityDensity = mosquitoes.length + hazards.length + Math.min(kobans.length, 4) + recoveries.length + beneficials.length + placedItemPressure + Math.min(catActivations.length, 2);
+  const isEntityDense = entityDensity >= 6;
+  const lightEffects = performanceLight || isEntityDense;
 
   const pulseWindChime = () => {
     setChimePulse(true);
@@ -185,8 +187,8 @@ export default function GameCanvas() {
     const canvas = canvasRef.current;
     if (!canvas || startedRef.current) return;
     startedRef.current = true;
-    const engine = new Engine(canvas, true, { preserveDrawingBuffer: false, stencil: false, adaptToDeviceRatio: false });
-    const renderScale = window.devicePixelRatio > 2 ? 1.55 : window.devicePixelRatio > 1.2 ? 1.25 : 1;
+    const engine = new Engine(canvas, !performanceLight, { preserveDrawingBuffer: false, stencil: false, adaptToDeviceRatio: false });
+    const renderScale = performanceLight ? (window.devicePixelRatio > 1.2 ? 2 : 1.5) : window.devicePixelRatio > 2 ? 1.55 : window.devicePixelRatio > 1.2 ? 1.25 : 1;
     engine.setHardwareScalingLevel(renderScale);
     let disposed = false;
     let gameOverTimer: number | undefined;
@@ -326,7 +328,7 @@ export default function GameCanvas() {
   };
 
   return (
-    <main className={`night-shell stage-${difficulty} phase-${phase} ${performanceLight ? "performance-light" : ""} ${isEntityDense ? "entity-dense" : ""}`}>
+    <main className={`night-shell stage-${difficulty} phase-${phase} ${lightEffects ? "performance-light" : ""} ${isEntityDense ? "entity-dense" : ""}`}>
       <div className="stage-background" aria-hidden="true" style={{ backgroundImage: `${stage.overlay}, url(${stage.background})` }} />
       <div className={`stage-atmosphere ${difficulty === "night" ? "is-night" : ""}`} aria-hidden="true">
         <span className="stage-contrast-overlay" />

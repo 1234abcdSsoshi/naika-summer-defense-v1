@@ -699,11 +699,15 @@ class GameWorld {
     return getBeneficialSpawnInterval({ difficulty: this.difficulty, elapsed: this.now, threat: this.currentThreat, random: this.random() });
   }
 
+  private getEntityPressure() {
+    return this.mosquitoes.filter((entry) => entry.state !== "falling").length + this.hazards.length + Math.min(this.coinsOnFloor.length, 4) + this.recoveries.length + this.beneficials.length + this.placed.length * 2;
+  }
+
   private getUiSyncInterval() {
-    const entityPressure = this.mosquitoes.filter((entry) => entry.state !== "falling").length + this.hazards.length + Math.min(this.coinsOnFloor.length, 4) + this.recoveries.length;
-    if (entityPressure >= 10) return 0.2;
-    if (entityPressure >= 6) return 0.14;
-    return 0.1;
+    const entityPressure = this.getEntityPressure();
+    if (entityPressure >= 10) return 0.25;
+    if (entityPressure >= 6) return 0.18;
+    return 0.12;
   }
 
   private updateBeneficials(delta: number) {
@@ -768,7 +772,7 @@ class GameWorld {
 
   private emitRecoveryViews(force = false) {
     if (!force && this.now < this.nextRecoverySyncAt) return;
-    this.nextRecoverySyncAt = this.now + this.getUiSyncInterval();
+    this.nextRecoverySyncAt = this.now + Math.max(0.5, this.getUiSyncInterval() * 3);
     this.callbacks.onRecoveries(this.recoveries.map(({ id, x, y, expiresAt }) => ({ id, x, y, remaining: Math.max(0, expiresAt - this.now) })));
   }
 
@@ -1202,7 +1206,7 @@ class GameWorld {
 
   private emitPlacedItemViews(force = false) {
     if (!force && this.now < this.nextPlacedItemSyncAt) return;
-    this.nextPlacedItemSyncAt = this.now + 0.16;
+    this.nextPlacedItemSyncAt = this.now + (this.getEntityPressure() >= 6 ? 0.36 : 0.24);
     this.callbacks.onPlacedItems(this.placed.map(({ id, x, y, bornAt, mesh }) => {
       const runtime = ITEM_RUNTIME[id];
       const remaining = runtime.duration === null ? null : Math.max(0, runtime.duration - (this.now - bornAt));
@@ -1505,7 +1509,7 @@ class GameWorld {
     const oscillator = this.buzzOscillator;
     const filter = this.buzzFilter;
     if (!context || context.state !== "running" || !gain || !oscillator || !filter || this.now < this.nextBuzzAt) return;
-    this.nextBuzzAt = this.now + 0.12;
+    this.nextBuzzAt = this.now + (this.getEntityPressure() >= 6 ? 0.28 : 0.16);
     let nearest = Number.POSITIVE_INFINITY;
     for (const mosquito of this.mosquitoes) {
       if (mosquito.state === "falling") continue;

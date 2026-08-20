@@ -11,21 +11,27 @@ const stageSource = readFileSync(resolve(projectRoot, "client/src/game/stage.ts"
 
 describe("蚊と小判の描画仕様", () => {
   it("モバイルでは高DPR描画と保存用バッファを抑え、高密度時はゲームビュー同期を追加で間引く", () => {
-    expect(componentSource).toContain('preserveDrawingBuffer: false, stencil: false, adaptToDeviceRatio: false');
+    expect(componentSource).toContain('new Engine(canvas, !performanceLight, { preserveDrawingBuffer: false, stencil: false, adaptToDeviceRatio: false })');
     expect(componentSource).toContain('engine.setHardwareScalingLevel(renderScale)');
+    expect(componentSource).toContain('const renderScale = performanceLight ? (window.devicePixelRatio > 1.2 ? 2 : 1.5)');
+    expect(sceneSource).toContain('private getEntityPressure()');
     expect(sceneSource).toContain('private getUiSyncInterval()');
-    expect(sceneSource).toContain('if (entityPressure >= 10) return 0.2');
-    expect(sceneSource).toContain('if (entityPressure >= 6) return 0.14');
+    expect(sceneSource).toContain('if (entityPressure >= 10) return 0.25');
+    expect(sceneSource).toContain('if (entityPressure >= 6) return 0.18');
     expect(sceneSource).toContain('this.nextMosquitoSyncAt = this.now + this.getUiSyncInterval()');
     expect(sceneSource).toContain('this.nextKobanSyncAt = this.now + this.getUiSyncInterval()');
     expect(sceneSource).toContain('private nextPlacedItemSyncAt = 0');
-    expect(sceneSource).toContain('this.nextPlacedItemSyncAt = this.now + 0.16');
+    expect(sceneSource).toContain('this.nextPlacedItemSyncAt = this.now + (this.getEntityPressure() >= 6 ? 0.36 : 0.24)');
+    expect(sceneSource).toContain('this.nextRecoverySyncAt = this.now + Math.max(0.5, this.getUiSyncInterval() * 3)');
+    expect(sceneSource).toContain('this.nextBuzzAt = this.now + (this.getEntityPressure() >= 6 ? 0.28 : 0.16)');
     expect(sceneSource).toContain('private emitPlacedItemViews(force = false)');
     expect(componentSource).toContain('const [performanceLight] = useState(() => {');
-    expect(componentSource).toContain('performanceLight ? "performance-light" : ""');
-    expect(componentSource).toContain('const isEntityDense = entityDensity >= 8');
+    expect(componentSource).toContain('const lightEffects = performanceLight || isEntityDense');
+    expect(componentSource).toContain('const isEntityDense = entityDensity >= 6');
     expect(componentSource).toContain('useMemo(() => [');
     expect(styleSource).toContain('.performance-light .skill-cast-vfx');
+    expect(styleSource).toContain('.performance-light .placed-item-dom');
+    expect(styleSource).toContain('.performance-light .recovery-glow { display: none; }');
     expect(styleSource).toContain('.performance-light .skill-vfx-particles { display: none; }');
     expect(styleSource).toContain('.entity-dense .enemy-dom, .entity-dense .hazard-dom { animation: none; }');
   });
