@@ -156,6 +156,7 @@ export default function GameCanvas() {
   const [showAudioSettings, setShowAudioSettings] = useState(() => new URLSearchParams(window.location.search).has("settings-check"));
   const [chimePulse, setChimePulse] = useState(false);
   const [isGameOverWaking, setIsGameOverWaking] = useState(false);
+  const [fps, setFps] = useState(0);
   const activationPreview = new URLSearchParams(window.location.search).has("activation-check");
   const skillPreview = new URLSearchParams(window.location.search).has("skill-check");
   const skillCastPreview = new URLSearchParams(window.location.search).has("skill-cast-check");
@@ -192,6 +193,8 @@ export default function GameCanvas() {
     engine.setHardwareScalingLevel(renderScale);
     let disposed = false;
     let gameOverTimer: number | undefined;
+    let fpsFrames = 0;
+    let fpsSampleStartedAt = performance.now();
     createGameScene(engine, canvas, {
       onHud: setHud,
       onMosquitoes: setMosquitoes,
@@ -229,7 +232,17 @@ export default function GameCanvas() {
         return;
       }
       handleRef.current = handle;
-      engine.runRenderLoop(() => handle.scene.render());
+      engine.runRenderLoop(() => {
+        handle.scene.render();
+        fpsFrames += 1;
+        const now = performance.now();
+        const elapsed = now - fpsSampleStartedAt;
+        if (elapsed >= 500) {
+          setFps(Math.round((fpsFrames * 1000) / elapsed));
+          fpsFrames = 0;
+          fpsSampleStartedAt = now;
+        }
+      });
       const params = new URLSearchParams(window.location.search);
       if (params.has("visual-check") || params.has("beneficial-check") || params.has("recovery-check") || params.has("skill-check") || params.has("skill-cast-check") || params.has("frog-coin-check") || params.has("game-over-check") || params.has("game-over-result-check") || params.has("damage-demo") || params.has("mosquito-flow-demo") || params.has("mosquito-flow-result-demo") || params.has("hazard-check") || params.has("mosquito-type-check")) {
         if (skillStagePreview) handle.setDifficulty(skillStagePreview);
@@ -368,6 +381,7 @@ export default function GameCanvas() {
         ))}
       </div>}
 
+      {phase === "playing" && <div className="fps-hud" aria-label={`現在のフレームレート ${fps} FPS`}><span>FPS</span><strong>{fps || "--"}</strong></div>}
       {phase !== "title" && (
         <div className="hud" aria-live="polite">
           <div className="hud-top">

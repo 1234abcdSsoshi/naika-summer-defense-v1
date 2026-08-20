@@ -36,6 +36,16 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain('.entity-dense .enemy-dom, .entity-dense .hazard-dom { animation: none; }');
   });
 
+  it("実機計測用に描画ループから現在FPSを0.5秒単位で画面端へ表示する", () => {
+    expect(componentSource).toContain('const [fps, setFps] = useState(0)');
+    expect(componentSource).toContain('let fpsFrames = 0');
+    expect(componentSource).toContain('let fpsSampleStartedAt = performance.now()');
+    expect(componentSource).toContain('if (elapsed >= 500)');
+    expect(componentSource).toContain('setFps(Math.round((fpsFrames * 1000) / elapsed))');
+    expect(componentSource).toContain('className="fps-hud"');
+    expect(styleSource).toContain('.fps-hud { pointer-events: none; position: absolute; z-index: 10;');
+  });
+
   it("高密度戦でも特殊蚊の種類を維持しつつ、敵と危険物の上限を安全に抑える", () => {
     expect(mosquitoProgressionSource).toContain('activeCap: Math.min(10');
     expect(mosquitoProgressionSource).toContain('spawnInterval: Math.max(0.45');
