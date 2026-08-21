@@ -65,6 +65,8 @@ const INCENSE_ASSET = "/manus-storage/naika-incense-reference-cutout_eeafc68a.pn
 const PLACEMENT_RANGE: Record<ItemId, number> = { incense: 1.5, cat: 2.25, frog: 2, daruma: 2.25 };
 
 type SleeperState = "rested" | "bitten" | "distressed" | "awake";
+type PerformanceTier = 0 | 1 | 2 | 3;
+const qualityTierFromFps = (measuredFps: number): PerformanceTier => measuredFps >= 55 ? 0 : measuredFps >= 45 ? 1 : measuredFps >= 35 ? 2 : 3;
 
 function getSleeperState(health: number, awake = false): SleeperState {
   if (awake || health <= 0) return "awake";
@@ -127,6 +129,7 @@ export default function GameCanvas() {
   const startedRef = useRef(false);
   const mosquitoDrawRef = useRef<MosquitoView[]>([]);
   const crowdModeRef = useRef(false);
+  const crowdFrameVersionRef = useRef(0);
   const mosquitoImageRef = useRef<Partial<Record<MosquitoView["type"], HTMLImageElement>>>({});
   const skillStageParam = new URLSearchParams(window.location.search).get("skill-stage");
   const skillStagePreview: DifficultyId | null = skillStageParam === "morning" || skillStageParam === "dusk" || skillStageParam === "night" ? skillStageParam : null;
@@ -140,6 +143,12 @@ export default function GameCanvas() {
     sfx: Number(localStorage.getItem("naika-sfx-volume") ?? "1"),
   }));
   const [showFps, setShowFps] = useState(() => new URLSearchParams(window.location.search).has("fps-check") || localStorage.getItem("naika-show-fps") !== "false");
+  const qualityTierPreview = (() => {
+    const value = Number(new URLSearchParams(window.location.search).get("quality-tier"));
+    return value === 0 || value === 1 || value === 2 || value === 3 ? value as PerformanceTier : null;
+  })();
+  const [qualityTier, setQualityTier] = useState<PerformanceTier>(() => qualityTierPreview ?? 0);
+  const qualityTierRef = useRef<PerformanceTier>(qualityTierPreview ?? 0);
   const [performanceLight] = useState(() => {
     const device = navigator as Navigator & { deviceMemory?: number };
     return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
@@ -186,7 +195,7 @@ export default function GameCanvas() {
   const isEntityDense = entityDensity >= 6;
   const isCrowdMode = mosquitoes.length >= 24;
   crowdModeRef.current = isCrowdMode;
-  const lightEffects = performanceLight || isEntityDense;
+  const lightEffects = performanceLight || isEntityDense || qualityTier >= 1;
 
   const pulseWindChime = () => {
     setChimePulse(true);
@@ -209,6 +218,7 @@ export default function GameCanvas() {
     let crowdDisplayWidth = 0;
     let crowdDisplayHeight = 0;
     let crowdDensity = 1;
+    let drawnCrowdVersion = -1;
     const crowdImages = mosquitoImageRef.current;
     for (const [type, source] of Object.entries(MOSQUITO_SPRITES) as [MosquitoView["type"], string][]) {
       const image = new Image();
@@ -220,7 +230,7 @@ export default function GameCanvas() {
       const crowdCanvas = crowdCanvasRef.current;
       if (!crowdCanvas) return;
       const bounds = canvas.getBoundingClientRect();
-      crowdDensity = performanceLight ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
+      crowdDensity = performanceLight || qualityTierRef.current >= 2 ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
       crowdDisplayWidth = bounds.width;
       crowdDisplayHeight = bounds.height;
       const width = Math.max(1, Math.round(crowdDisplayWidth * crowdDensity));
@@ -230,6 +240,7 @@ export default function GameCanvas() {
         crowdCanvas.height = height;
         crowdWidth = width;
         crowdHeight = height;
+        drawnCrowdVersion = -1;
       }
     };
     const drawMosquitoCrowd = () => {
@@ -238,11 +249,15 @@ export default function GameCanvas() {
       if (!crowdWidth || !crowdHeight) resizeMosquitoCrowd();
       const context = crowdCanvas.getContext("2d");
       if (!context) return;
+      const crowdFrameVersion = crowdFrameVersionRef.current;
+      if (crowdFrameVersion === drawnCrowdVersion) return;
+      drawnCrowdVersion = crowdFrameVersion;
       context.setTransform(crowdDensity, 0, 0, crowdDensity, 0, 0);
       context.clearRect(0, 0, crowdDisplayWidth, crowdDisplayHeight);
       if (!crowdModeRef.current) return;
       const views = mosquitoDrawRef.current;
-      const groupStride = views.length >= 500 ? 25 : views.length >= 60 ? 5 : 1;
+      const baseGroupStride = views.length >= 500 ? 25 : views.length >= 60 ? 5 : 1;
+      const groupStride = qualityTierRef.current >= 3 ? Math.max(baseGroupStride, 100) : qualityTierRef.current >= 2 ? Math.max(baseGroupStride, 50) : baseGroupStride;
       for (let start = 0; start < views.length; start += groupStride) {
         const group = views.slice(start, start + groupStride);
         const mosquito = group[0];
@@ -266,6 +281,13 @@ export default function GameCanvas() {
         context.restore();
       }
     };
+    const applyQualityTier = (tier: PerformanceTier) => {
+      const adaptiveScale = tier === 0 ? renderScale : tier === 1 ? Math.max(renderScale, 1.75) : tier === 2 ? Math.max(renderScale, 2.2) : Math.max(renderScale, 2.6);
+      engine.setHardwareScalingLevel(adaptiveScale);
+      resizeMosquitoCrowd();
+      crowdFrameVersionRef.current += 1;
+      handleRef.current?.setQualityTier(tier);
+    };
     createGameScene(engine, canvas, {
       onHud: setHud,
       onMosquitoes: (nextMosquitoes) => {
@@ -274,6 +296,7 @@ export default function GameCanvas() {
       },
       onMosquitoFrame: (nextMosquitoes) => {
         mosquitoDrawRef.current = nextMosquitoes as MosquitoView[];
+        crowdFrameVersionRef.current += 1;
       },
       onHazards: setHazards,
       onKobans: setKobans,
@@ -309,6 +332,7 @@ export default function GameCanvas() {
         return;
       }
       handleRef.current = handle;
+      applyQualityTier(qualityTierRef.current);
       engine.runRenderLoop(() => {
         handle.scene.render();
         drawMosquitoCrowd();
@@ -316,7 +340,14 @@ export default function GameCanvas() {
         const now = performance.now();
         const elapsed = now - fpsSampleStartedAt;
         if (elapsed >= 500) {
-          setFps(Math.round((fpsFrames * 1000) / elapsed));
+          const measuredFps = Math.round((fpsFrames * 1000) / elapsed);
+          setFps(measuredFps);
+          const nextTier = qualityTierPreview ?? qualityTierFromFps(measuredFps);
+          if (nextTier !== qualityTierRef.current) {
+            qualityTierRef.current = nextTier;
+            setQualityTier(nextTier);
+            applyQualityTier(nextTier);
+          }
           fpsFrames = 0;
           fpsSampleStartedAt = now;
         }
@@ -426,7 +457,7 @@ export default function GameCanvas() {
   };
 
   return (
-    <main className={`night-shell stage-${difficulty} phase-${phase} ${lightEffects ? "performance-light" : ""} ${isEntityDense ? "entity-dense" : ""}`}>
+    <main className={`night-shell stage-${difficulty} phase-${phase} quality-tier-${qualityTier} ${lightEffects ? "performance-light" : ""} ${isEntityDense ? "entity-dense" : ""}`}>
       <div className="stage-background" aria-hidden="true" style={{ backgroundImage: `${stage.overlay}, url(${stage.background})` }} />
       <div className={`stage-atmosphere ${difficulty === "night" ? "is-night" : ""}`} aria-hidden="true">
         <span className="stage-contrast-overlay" />
@@ -467,7 +498,7 @@ export default function GameCanvas() {
         ))}
       </div>}
 
-      {phase === "playing" && showFps && <div className="fps-hud" aria-label={`現在のフレームレート ${fps} FPS`}><span>FPS</span><strong>{fps || "--"}</strong>{stressMosquitoCount > 0 && <small>{stressMosquitoCount}体 / {stressGroupCount}群 / 目標60</small>}</div>}
+      {phase === "playing" && showFps && <div className="fps-hud" aria-label={`現在のフレームレート ${fps} FPS、品質段階 ${qualityTier}`}><span>FPS</span><strong>{fps || "--"}</strong><em>Q{qualityTier}</em>{stressMosquitoCount > 0 && <small>{stressMosquitoCount}体 / {stressGroupCount}群 / 目標60</small>}</div>}
       {phase !== "title" && (
         <div className="hud" aria-live="polite">
           <div className="hud-top">

@@ -100,6 +100,7 @@ export type GameHandle = {
   setDifficulty: (difficulty: DifficultyId) => void;
   retry: () => void;
   setPaused: (paused: boolean) => void;
+  setQualityTier: (tier: number) => void;
   activateSkill: () => void;
   dispose: () => void;
 };
@@ -256,6 +257,10 @@ class GameWorld {
   private nextBeneficialSyncAt = 0;
   private nextHudSyncAt = 0;
   private nextBuzzAt = 0;
+  private nextStressUpdateAt = 0;
+  private lastStressUpdateAt = 0;
+  private nextStressFrameAt = 0;
+  private qualityTier = 0;
   private readonly telemetry = new GameplayTelemetry();
   private readonly playerRoot: TransformNode;
   private readonly callbacks: GameCallbacks;
@@ -416,6 +421,21 @@ class GameWorld {
     if (paused) this.stopMosquitoBuzz();
   };
 
+  setQualityTier = (tier: number) => {
+    const nextTier = Math.max(0, Math.min(3, Math.round(tier)));
+    if (nextTier === this.qualityTier) return;
+    this.qualityTier = nextTier;
+    if (this.qualityTier >= 3) this.stopMosquitoBuzz();
+    this.nextMosquitoSyncAt = 0;
+    this.nextHazardSyncAt = 0;
+    this.nextKobanSyncAt = 0;
+    this.nextBeneficialSyncAt = 0;
+    this.nextRecoverySyncAt = 0;
+    this.nextPlacedItemSyncAt = 0;
+    this.nextStressUpdateAt = 0;
+    this.nextStressFrameAt = 0;
+  };
+
   activateSkill = () => {
     if (!this.running || this.paused || this.skillCharge < 1 || this.skillCastUntil > this.now) return;
     this.skillCharge = 0;
@@ -437,7 +457,7 @@ class GameWorld {
   };
 
   update(delta: number) {
-    const safeDelta = Math.min(delta, 0.05);
+    const safeDelta = Math.min(delta, this.qualityTier >= 2 ? 0.04 : 0.05);
     if (!this.running || this.paused) return;
     this.now += safeDelta;
     this.skillCharge = Math.min(1, this.skillCharge + safeDelta / 60);
@@ -624,6 +644,9 @@ class GameWorld {
     this.nextBeneficialSyncAt = 0;
     this.nextHudSyncAt = 0;
     this.nextBuzzAt = 0;
+    this.nextStressUpdateAt = 0;
+    this.lastStressUpdateAt = 0;
+    this.nextStressFrameAt = 0;
     this.nextBeneficialAt = this.getBeneficialInterval();
     this.nextRecoveryAt = RECOVERY_INTERVAL_SECONDS;
     this.skillCharge = 0;
@@ -738,10 +761,8 @@ class GameWorld {
 
   private getUiSyncInterval() {
     const entityPressure = this.getEntityPressure();
-    if (entityPressure >= 60) return 0.35;
-    if (entityPressure >= 10) return 0.25;
-    if (entityPressure >= 6) return 0.18;
-    return 0.12;
+    const baseInterval = entityPressure >= 60 ? 0.35 : entityPressure >= 10 ? 0.25 : entityPressure >= 6 ? 0.18 : 0.12;
+    return baseInterval * [1, 1.3, 1.75, 2.3][this.qualityTier];
   }
 
   private updateBeneficials(delta: number) {
@@ -824,9 +845,14 @@ class GameWorld {
 
   private updateMosquitoes(delta: number) {
     if (this.stressMosquitoCount) {
+      const stressInterval = this.qualityTier >= 3 ? 0.1 : this.qualityTier >= 2 ? 1 / 15 : this.qualityTier >= 1 ? 1 / 20 : 1 / 30;
+      if (this.now < this.nextStressUpdateAt) return;
+      const stressDelta = Math.min(0.16, this.lastStressUpdateAt ? this.now - this.lastStressUpdateAt : delta);
+      this.lastStressUpdateAt = this.now;
+      this.nextStressUpdateAt = this.now + stressInterval;
       for (const mosquito of this.mosquitoes) {
-        mosquito.y -= mosquito.speed * delta;
-        mosquito.x += Math.sin(this.now * 1.6 + mosquito.id * 0.13) * delta * 0.045;
+        mosquito.y -= mosquito.speed * stressDelta;
+        mosquito.x += Math.sin(this.now * 1.6 + mosquito.id * 0.13) * stressDelta * 0.045;
         if (mosquito.y < -3.72) {
           mosquito.y = 4.08;
           mosquito.x = -3.72 + (mosquito.id % 25) * 0.31;
@@ -900,6 +926,11 @@ class GameWorld {
 
   private emitMosquitoFrame() {
     if (this.mosquitoes.length < 24) return;
+    if (this.stressMosquitoCount) {
+      const frameInterval = this.qualityTier >= 3 ? 0.1 : this.qualityTier >= 2 ? 1 / 15 : this.qualityTier >= 1 ? 1 / 20 : 1 / 30;
+      if (this.now < this.nextStressFrameAt) return;
+      this.nextStressFrameAt = this.now + frameInterval;
+    }
     let count = 0;
     for (const mosquito of this.mosquitoes) {
       if (mosquito.state === "falling") continue;
@@ -1564,6 +1595,10 @@ class GameWorld {
   }
 
   private updateMosquitoBuzz() {
+    if (this.qualityTier >= 3) {
+      this.stopMosquitoBuzz();
+      return;
+    }
     if (this.stressMosquitoCount) {
       this.stopMosquitoBuzz();
       return;
@@ -1578,7 +1613,8 @@ class GameWorld {
     const oscillator = this.buzzOscillator;
     const filter = this.buzzFilter;
     if (!context || context.state !== "running" || !gain || !oscillator || !filter || this.now < this.nextBuzzAt) return;
-    this.nextBuzzAt = this.now + (this.getEntityPressure() >= 6 ? 0.28 : 0.16);
+    const baseInterval = this.getEntityPressure() >= 6 ? 0.28 : 0.16;
+    this.nextBuzzAt = this.now + baseInterval * (this.qualityTier >= 2 ? 3 : this.qualityTier >= 1 ? 1.75 : 1);
     let nearest = Number.POSITIVE_INFINITY;
     for (const mosquito of this.mosquitoes) {
       if (mosquito.state === "falling") continue;
@@ -1650,6 +1686,7 @@ export async function createGameScene(engine: Engine, canvas: HTMLCanvasElement,
     setDifficulty: world.setDifficulty,
     retry: world.retry,
     setPaused: world.setPaused,
+    setQualityTier: world.setQualityTier,
     activateSkill: world.activateSkill,
     dispose: () => {
       canvas.removeEventListener("pointerdown", onPointerDown);

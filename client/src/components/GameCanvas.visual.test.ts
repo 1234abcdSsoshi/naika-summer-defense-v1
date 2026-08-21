@@ -16,14 +16,14 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).toContain('const renderScale = performanceLight ? (window.devicePixelRatio > 1.2 ? 2 : 1.5)');
     expect(sceneSource).toContain('private getEntityPressure()');
     expect(sceneSource).toContain('private getUiSyncInterval()');
-    expect(sceneSource).toContain('if (entityPressure >= 10) return 0.25');
-    expect(sceneSource).toContain('if (entityPressure >= 6) return 0.18');
+    expect(sceneSource).toContain('entityPressure >= 10 ? 0.25');
+    expect(sceneSource).toContain('entityPressure >= 6 ? 0.18');
     expect(sceneSource).toContain('this.nextMosquitoSyncAt = this.now + this.getUiSyncInterval()');
     expect(sceneSource).toContain('this.nextKobanSyncAt = this.now + this.getUiSyncInterval()');
     expect(sceneSource).toContain('private nextPlacedItemSyncAt = 0');
     expect(sceneSource).toContain('this.nextPlacedItemSyncAt = this.now + (this.getEntityPressure() >= 6 ? 0.36 : 0.24)');
     expect(sceneSource).toContain('this.nextRecoverySyncAt = this.now + Math.max(0.5, this.getUiSyncInterval() * 3)');
-    expect(sceneSource).toContain('this.nextBuzzAt = this.now + (this.getEntityPressure() >= 6 ? 0.28 : 0.16)');
+    expect(sceneSource).toContain('const baseInterval = this.getEntityPressure() >= 6 ? 0.28 : 0.16');
     expect(sceneSource).toContain('private emitPlacedItemViews(force = false)');
     expect(componentSource).toContain('const [performanceLight] = useState(() => {');
     expect(componentSource).toContain('const lightEffects = performanceLight || isEntityDense');
@@ -41,7 +41,7 @@ describe("蚊と小判の描画仕様", () => {
     expect(componentSource).toContain('let fpsFrames = 0');
     expect(componentSource).toContain('let fpsSampleStartedAt = performance.now()');
     expect(componentSource).toContain('if (elapsed >= 500)');
-    expect(componentSource).toContain('setFps(Math.round((fpsFrames * 1000) / elapsed))');
+    expect(componentSource).toContain('const measuredFps = Math.round((fpsFrames * 1000) / elapsed)');
     expect(componentSource).toContain('className="fps-hud"');
     expect(styleSource).toContain('.fps-hud { pointer-events: none; position: absolute; z-index: 10;');
   });
@@ -56,6 +56,22 @@ describe("蚊と小判の描画仕様", () => {
     expect(styleSource).toContain('.settings-switch { display: flex; align-items: center;');
   });
 
+  it("FPS低下時は描画解像度、演出、同期、蚊音を自動的に段階軽量化する", () => {
+    expect(componentSource).toContain('const qualityTierFromFps = (measuredFps: number): PerformanceTier => measuredFps >= 55 ? 0 : measuredFps >= 45 ? 1 : measuredFps >= 35 ? 2 : 3');
+    expect(componentSource).toContain('const [qualityTier, setQualityTier] = useState<PerformanceTier>');
+    expect(componentSource).toContain('const nextTier = qualityTierPreview ?? qualityTierFromFps(measuredFps)');
+    expect(componentSource).toContain('engine.setHardwareScalingLevel(adaptiveScale)');
+    expect(componentSource).toContain('handleRef.current?.setQualityTier(tier)');
+    expect(componentSource).toContain('quality-tier-${qualityTier}');
+    expect(componentSource).toContain('<em>Q{qualityTier}</em>');
+    expect(sceneSource).toContain('setQualityTier: (tier: number) => void');
+    expect(sceneSource).toContain('private qualityTier = 0');
+    expect(sceneSource).toContain('return baseInterval * [1, 1.3, 1.75, 2.3][this.qualityTier]');
+    expect(sceneSource).toContain('if (this.qualityTier >= 3) {');
+    expect(sceneSource).toContain('this.stopMosquitoBuzz();');
+    expect(styleSource).toContain('.quality-tier-2 .mosquito-crowd-canvas { image-rendering: pixelated; }');
+  });
+
   it("100体負荷テストでは敵を単一Canvasに集約し、Reactの個別敵DOM描画を停止する", () => {
     expect(sceneSource).toContain('get("stress-mosquitoes")');
     expect(sceneSource).toContain('value >= 1 && value <= 1000 ? value : 0');
@@ -64,13 +80,14 @@ describe("蚊と小判の描画仕様", () => {
     expect(sceneSource).toContain('const columns = 25');
     expect(sceneSource).toContain('private emitMosquitoFrame()');
     expect(sceneSource).toContain('if (this.mosquitoes.length < 24) return');
-    expect(sceneSource).toContain('if (entityPressure >= 60) return 0.35');
+    expect(sceneSource).toContain('const baseInterval = entityPressure >= 60 ? 0.35');
     expect(componentSource).toContain('const crowdCanvasRef = useRef<HTMLCanvasElement>(null)');
     expect(componentSource).toContain('const drawMosquitoCrowd = () =>');
-    expect(componentSource).toContain('const groupStride = views.length >= 500 ? 25 : views.length >= 60 ? 5 : 1');
+    expect(componentSource).toContain('const baseGroupStride = views.length >= 500 ? 25 : views.length >= 60 ? 5 : 1');
     expect(componentSource).toContain('const stressGroupCount = stressMosquitoCount >= 500 ? Math.ceil(stressMosquitoCount / 25)');
     expect(componentSource).toContain('const clusterColumns = groupStride >= 25 ? 8 : 1');
     expect(componentSource).toContain('groupStride >= 25 ? (0.1 + (clusterIndex % clusterColumns) * 0.115) * crowdDisplayWidth');
+    expect(componentSource).toContain('qualityTierRef.current >= 3 ? Math.max(baseGroupStride, 100)');
     expect(componentSource).toContain('const resizeMosquitoCrowd = () =>');
     expect(componentSource).toContain('if (!crowdWidth || !crowdHeight) resizeMosquitoCrowd()');
     expect(componentSource).toContain('context.fillText(`×${group.length}`');
